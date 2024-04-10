@@ -1,7 +1,10 @@
 package fer.dipl.mdl
 
+import cbor.Cbor
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
+import kotlinx.serialization.decodeFromByteArray
+import kotlinx.serialization.encodeToHexString
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -15,6 +18,24 @@ data class IssuerSigned(
 ){
     // Ensure a primary constructor is available
     constructor() : this(HashMap<String, Array<ByteArray>>(), LinkedList<Any>())
+
+    override fun toString(): String {
+        var tmp = "IssuerSigned("
+        nameSpaces.forEach { key, value ->
+            tmp += key + ": ["
+            value.forEach { dataIteam ->
+                println(decodeNameSpace(dataIteam))
+                tmp += decodeNameSpace(dataIteam)
+                tmp += ", "
+            }
+            tmp += "]"
+
+        }
+        tmp += ")"
+
+        return tmp
+    }
+
 }
 
 data class MyObject(
@@ -24,6 +45,31 @@ data class MyObject(
     // Ensure a primary constructor is available
     constructor() : this("", IssuerSigned())
 }
+
+data class DataElementHrv(
+    val digestID: String,
+    val random: ByteArray,
+    val elementIdentifier: String,
+    val elementValue: String
+){
+    // Ensure a primary constructor is available
+    constructor() : this("", byteArrayOf(), "","")
+    //constructor() : this(byteArrayOf())
+    override fun toString(): String {
+        var tmp = "DataElementHrv("
+        tmp += "digestID=" + digestID + ", "
+        tmp += "random=h'" + random.joinToString(""){ String.format("%02X", it) } + "', "
+        tmp += "elementIdentifier=" + elementIdentifier + ", "
+        tmp += "elementValue=" + elementValue
+        tmp += ")"
+
+        return tmp
+    }
+}
+
+data class Random(
+    val random: ByteArray
+)
 
 
 suspend fun main(){
@@ -45,7 +91,13 @@ suspend fun main(){
         println(it)
         it.forEach { itit ->
             println(itit)
-            println(decodeNameSpace(itit))
+            val temp_hrv = decodeNameSpace(itit)
+            println("TEMP : " + temp_hrv)
+            println("TEMP : " + temp_hrv.random.joinToString(""){ String.format("%02X", it) })
+
+            println("TEMP : " + temp_hrv.digestID)
+            println("TEMP : " + temp_hrv.elementIdentifier)
+            println("TEMP : " + temp_hrv.elementValue)
         }
     }
 
@@ -74,7 +126,13 @@ fun decodeCbor(data: ByteArray): MyObject {
     return mapper.readValue(data, MyObject::class.java)
 }
 
-fun decodeNameSpace(data: ByteArray): Any {
+fun decodeNameSpace(data: ByteArray): DataElementHrv {
     val mapper = ObjectMapper(CBORFactory())
-    return mapper.readValue(data, Any::class.java)
+    return mapper.readValue(data, DataElementHrv::class.java)
+}
+
+fun encodeRandom(data: ByteArray): Any {
+    val mapper = ObjectMapper(CBORFactory())
+    println("ZIVOTE MOJ: " + mapper.writeValueAsBytes(data).joinToString(""){ String.format("%02X", it) })
+    return mapper.writeValueAsBytes(data)
 }
