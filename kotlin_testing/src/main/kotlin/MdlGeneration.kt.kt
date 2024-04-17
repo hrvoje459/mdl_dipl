@@ -68,6 +68,7 @@ suspend fun main() {
     val ISSUER_KEY_ID = "ISSUER_KEY"
     val DEVICE_KEY_ID = "DEVICE_KEY"
 
+
     // create CA certificate
     val rootCaCertificate = X509v3CertificateBuilder(
         X500Name("CN=MDOC ROOT CSP"), BigInteger.valueOf(SecureRandom().nextLong()),
@@ -94,7 +95,7 @@ suspend fun main() {
     val cryptoProvider = SimpleCOSECryptoProvider(
         listOf(
             COSECryptoProviderKeyInfo(ISSUER_KEY_ID, AlgorithmID.ECDSA_256, issuerKeyPair.public, issuerKeyPair.private, listOf(issuerCertificate), listOf(rootCaCertificate)),
-            COSECryptoProviderKeyInfo(DEVICE_KEY_ID, AlgorithmID.ECDSA_256, deviceKeyPair.public, deviceKeyPair.private)
+            COSECryptoProviderKeyInfo(DEVICE_KEY_ID, AlgorithmID.ECDSA_256, deviceKeyPair.public/*, deviceKeyPair.private*/)
         )
     )
     // create device key info structure of device public key, for holder binding
@@ -126,6 +127,7 @@ suspend fun main() {
     println(mdoc.issuerSigned.nameSpaces)
     println("VALUES")
     println(mdoc.issuerSigned?.nameSpaces?.get("org.iso.18013.5.1"))
+    mdoc.issuerSigned.issuerAuth
 
     mdoc.issuerSigned?.nameSpaces?.get("org.iso.18013.5.1")?.forEachIndexed { index, element ->
         println("VALUE " + index + ":")
@@ -143,7 +145,7 @@ suspend fun main() {
         val mapper = ObjectMapper(CBORFactory())
         val text =  mapper.readValue(inputStream, String::class.java)
 
-        println(text)
+        println("Cert " + text)
 
 
     }

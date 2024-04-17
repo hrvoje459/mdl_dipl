@@ -5,6 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToHexString
+import java.io.ByteArrayInputStream
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -107,6 +110,30 @@ suspend fun main(){
     // Print decoded CBOR
     println(decodedCbor)
 
+    val x5chain = "308201473081EEA00302010202083F2D909025FA5360300A06082A8648CE3D04030230173115301306035504030C0C4D444F4320524F4F54204341301E170D3234303430383231333634345A170D3234303430393231333634345A301B3119301706035504030C104D444F432054657374204973737565723059301306072A8648CE3D020106082A8648CE3D03010703420004FD3932E4C20C0F76E807A03D5A57AEF5A19196614D984B47C2967FB633AA62EB83A3F4D432D12944F26927D838E66206FC6497DC4240CB2B2B0D15E6A7965DF6A320301E300C0603551D130101FF04023000300E0603551D0F0101FF040403020780300A06082A8648CE3D040302034800304502206905C2FE9D51B7963C259C4F27B599B680FA9AA966DEB19FA55DF79B62FB3196022100C350F9347CCFC8E7E6B3F2D9147C893E9DC6EFBE69FFF7217CCE498521BA81C1"
+    val bytes = x5chain.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+    println(bytes.toUByteArray())
+
+    val certificateFactory = CertificateFactory.getInstance("X.509")
+    val inputStream = ByteArrayInputStream(bytes)
+
+    val certificates = mutableListOf<X509Certificate>()
+    try {
+        val certificate = certificateFactory.generateCertificate(inputStream) as X509Certificate
+        certificates.add(certificate)
+    } catch (e: Exception) {
+        // Handle certificate parsing errors
+        e.printStackTrace()
+    } finally {
+        inputStream.close()
+    }
+    certificates.forEachIndexed { index, certificate ->
+        println(certificate)
+        println("Certificate $index:")
+        println(certificate)
+        // Print other certificate details if needed
+    }
+
 }
 
 fun hexStringToByteArray(hexString: String): ByteArray {
@@ -131,8 +158,3 @@ fun decodeNameSpace(data: ByteArray): DataElementHrv {
     return mapper.readValue(data, DataElementHrv::class.java)
 }
 
-fun encodeRandom(data: ByteArray): Any {
-    val mapper = ObjectMapper(CBORFactory())
-    println("ZIVOTE MOJ: " + mapper.writeValueAsBytes(data).joinToString(""){ String.format("%02X", it) })
-    return mapper.writeValueAsBytes(data)
-}

@@ -1,78 +1,35 @@
 package fer.dipl.mdl
 
-import id.walt.credentials.CredentialBuilder
-import id.walt.credentials.CredentialBuilderType
-import id.walt.credentials.issuance.Issuer.mergingSdJwtIssue
+import id.walt.crypto.keys.KeyType
 import id.walt.crypto.keys.jwk.JWKKey
 import id.walt.crypto.keys.jwk.JWKKeyMetadata
-import id.walt.crypto.keys.KeyType
-import id.walt.did.dids.DidService
 import id.walt.did.dids.registrar.dids.DidJwkCreateOptions
-import id.walt.did.dids.registrar.dids.DidKeyCreateOptions
-import id.walt.did.dids.registrar.dids.DidWebCreateOptions
 import id.walt.did.dids.registrar.local.jwk.DidJwkRegistrar
-import kotlinx.serialization.Serializable
-import id.walt.crypto.utils.JsonUtils.toJsonObject
-import id.walt.sdjwt.SDMap
-
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.serializer
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.net.URL
 import java.net.URLDecoder
 
-import java.util.Base64
-import kotlin.math.sign
+class MdlApiTesting {
+}
 
-// Define payload data class
-@Serializable
-data class JwtPayload(
-    val aud: String,
-    val iat: Long,
-    val nonce: String
-    // Add other fields as needed
-)
+suspend fun main (){
 
-// Define payload data class
-@Serializable
-data class CredentialRequestPayload(
-    val credentialIdentifier: String,
-    val proof: JWTProofPayload,
-    val format: String
-    // Add other fields as needed
-)
-
-@Serializable
-data class JWTProofPayload(
-    val proof_type: String,
-    val jwt: String
-    // Add other fields as needed
-)
-
-suspend fun main() {
-    val name = "Kotlin"
-
-
-    println("Hello, " + name + "!")
+    println("Hello, " + "Hrvoje" + "!")
 
 
     val registrar = DidJwkRegistrar()
 
     // Create end user key (wallet)
-    val user_key = JWKKey.generate(KeyType.Ed25519, JWKKeyMetadata())
+    val user_key = JWKKey.generate(KeyType.secp256r1, JWKKeyMetadata())
     println("Wallet KEY: " + user_key.exportJWK())
 
     // Create end user did
     val user_options = DidJwkCreateOptions(
-        keyType = KeyType.Ed25519
+        keyType = KeyType.secp256r1
     )
     val user_didResult = registrar.registerByKey(user_key, user_options)
     println("User DiD: " + user_didResult)
@@ -83,18 +40,101 @@ suspend fun main() {
 
     // Create ISSUER KEY
 
-    val issuer_key = JWKKey.generate(KeyType.Ed25519, JWKKeyMetadata())
+    val issuer_key = JWKKey.generate(KeyType.secp256r1, JWKKeyMetadata())
     println("Issuer KEY: " + issuer_key.exportJWK())
     val issuer_key_export = issuer_key.exportJWK()
 
     val issuer_options = DidJwkCreateOptions(
-        keyType = KeyType.Ed25519
+        keyType = KeyType.secp256r1
     )
     val issuer_didResult = registrar.registerByKey(user_key, issuer_options)
     println("Issuer DiD: " + issuer_didResult)
     println("Issuer DiD: " + issuer_didResult.did)
 
     val issuer_did = issuer_didResult.did
+
+    val drivingLicenseVerificableCredentail = "{\n" +
+            "  \"@context\": [\n" +
+            "    \"https://www.w3.org/2018/credentials/v1\",\n" +
+            "    \"https://w3id.org/vdl/v1\",\n" +
+            "    \"https://w3id.org/vdl/aamva/v1\"\n" +
+            "  ],\n" +
+            "  \"type\": [\n" +
+            "    \"VerifiableCredential\",\n" +
+            "    \"Iso18013DriversLicenseCredential\"\n" +
+            "  ],\n" +
+            "  \"issuer\": {\n" +
+            "    \"id\": \"$issuer_did\",\n" +
+            "    \"name\": \"Utopia Department of Motor Vehicles\",\n" +
+            "    \"url\": \"https://dmv.utopia.example/\",\n" +
+            "    \"image\": \"https://dmv.utopia.example/logo.png\"\n" +
+            "  },\n" +
+            "  \"issuanceDate\": \"2023-11-15T10:00:00-07:00\",\n" +
+            "  \"expirationDate\": \"2028-11-15T12:00:00-06:00\",\n" +
+            "  \"name\": \"Utopia Driver's License\",\n" +
+            "  \"image\": \"data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUg...kSuQmCC\",\n" +
+            "  \"description\": \"A license granting driving privileges in Utopia.\",\n" +
+            "  \"credentialSubject\": {\n" +
+            "    \"id\": \"$user_did\",\n" +
+            "    \"type\": \"LicensedDriver\",\n" +
+            "    \"driversLicense\": {\n" +
+            "      \"type\": \"Iso18013DriversLicense\",\n" +
+            "      \"document_number\": \"542426814\",\n" +
+            "      \"family_name\": \"TURNER\",\n" +
+            "      \"given_name\": \"SUSAN\",\n" +
+            "      \"portrait\": \"data:image/jpeg;base64,/9j/4AAQSkZJR...RSClooooP/2Q==\",\n" +
+            "      \"birth_date\": \"1998-08-28\",\n" +
+            "      \"issue_date\": \"2023-01-15T10:00:00-07:00\",\n" +
+            "      \"expiry_date\": \"2028-08-27T12:00:00-06:00\",\n" +
+            "      \"issuing_country\": \"UA\",\n" +
+            "      \"issuing_authority\": \"UADMV\",\n" +
+            "      \"driving_privileges\": [{\n" +
+            "        \"codes\": [{\"code\": \"D\"}],\n" +
+            "        \"vehicle_category_code\": \"D\",\n" +
+            "        \"issue_date\": \"2019-01-01\",\n" +
+            "        \"expiry_date\": \"2027-01-01\"\n" +
+            "      },\n" +
+            "      {\n" +
+            "        \"codes\": [{\"code\": \"C\"}],\n" +
+            "        \"vehicle_category_code\": \"C\",\n" +
+            "        \"issue_date\": \"2019-01-01\",\n" +
+            "        \"expiry_date\": \"2017-01-01\"\n" +
+            "      }],\n" +
+            "      \"un_distinguishing_sign\": \"UTA\",\n" +
+            "      \"aamva_aka_suffix\": \"1ST\",\n" +
+            "      \"sex\": 2,\n" +
+            "      \"aamva_family_name_truncation\": \"N\",\n" +
+            "      \"aamva_given_name_truncation\": \"N\"\n" +
+            "    }\n" +
+            "  }\n" +
+            "}"
+
+    println("HRVOJE JWK: " + issuer_key_export)
+
+    val drivingLicenseCredentailRequest = "{\n" +
+            "  \"issuerKey\": {\n" +
+            "    \"type\": \"jwk\",\n" +
+            "    \"jwk\": \"${issuer_key_export.replace("\"","\\\"")}\"\n" +
+            "  },\n" +
+            "  \"issuerDid\": \"$issuer_did\",\n" +
+            "  \"vc\": $drivingLicenseVerificableCredentail,\n" +
+            "  \"mapping\": {\n" +
+            "    \"id\": \"<uuid>\",\n" +
+            "    \"issuer\": {\n" +
+            "      \"id\": \"<issuerDid>\"\n" +
+            "    },\n" +
+            "    \"credentialSubject\": {\n" +
+            "      \"id\": \"<subjectDid>\"\n" +
+            "    },\n" +
+            "    \"issuanceDate\": \"<timestamp>\",\n" +
+            "    \"expirationDate\": \"<timestamp-in:365d>\"\n" +
+            "  }"+
+            "}"
+
+    println("HRVOJE REQ: " + drivingLicenseCredentailRequest)
+
+    val drivingLicenseVerificableCredentailRequestBody = drivingLicenseCredentailRequest.toRequestBody("application/json".toMediaType())
+
 
 
 
@@ -167,13 +207,12 @@ suspend fun main() {
 
     val client = OkHttpClient()
     val mediaType = "application/json".toMediaType()
-    val body = "{\n  \"issuerKey\": {\n    \"type\": \"jwk\",\n    \"jwk\": \"{\\\"kty\\\":\\\"OKP\\\",\\\"d\\\":\\\"jQGuwJkF6umOyX4dSv_bRVozjKRc2NvPg1JSt39PaHo\\\",\\\"crv\\\":\\\"Ed25519\\\",\\\"kid\\\":\\\"ByUineP2PKbozXLH8nJiYrXUIxX5CjvinipFBBBCOi4\\\",\\\"x\\\":\\\"6zAA6R5vwH-WnAFh8ZSEIrF7sqG7T8BiuiQQhxvB4OQ\\\"}\"\n  },\n  \"issuerDid\": \"did:jwk:eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5Iiwia2lkIjoiQnlVaW5lUDJQS2JvelhMSDhuSmlZclhVSXhYNUNqdmluaXBGQkJCQ09pNCIsIngiOiI2ekFBNlI1dndILVduQUZoOFpTRUlyRjdzcUc3VDhCaXVpUVFoeHZCNE9RIn0\",\n  \"vc\": {\n    \"@context\": [\n      \"https://www.w3.org/2018/credentials/v1\",\n      \"https://www.w3.org/2018/credentials/examples/v1\"\n    ],\n    \"id\": \"http://example.gov/credentials/3732\",\n    \"type\": [\n      \"VerifiableCredential\",\n      \"UniversityDegree\"\n    ],\n    \"issuer\": {\n      \"id\": \"did:web:vc.transmute.world\"\n    },\n    \"issuanceDate\": \"2024-03-27T00:14:12.164Z\",\n    \"credentialSubject\": {\n      \"id\": \"did:example:ebfeb1f712ebc6f1c276e12ec21\",\n      \"degree\": {\n        \"type\": \"BachelorDegree\",\n        \"name\": \"Bachelor of Science and Arts\"\n      }\n    }\n  },\n  \"mapping\": {\n    \"id\": \"<uuid>\",\n    \"issuer\": {\n      \"id\": \"<issuerDid>\"\n    },\n    \"credentialSubject\": {\n      \"id\": \"<subjectDid>\"\n    },\n    \"issuanceDate\": \"<timestamp>\",\n    \"expirationDate\": \"<timestamp-in:365d>\"\n  },\n  \"selectiveDisclosure\": {\n  \"fields\": {\n    \"issuanceDate\": {\n      \"sd\": true\n    },\n    \"credentialSubject\": {\n      \"sd\": false,\n      \"children\": {\n        \"fields\": {\n          \"degree\": {\n            \"sd\": false,\n            \"children\": {\n              \"fields\": {\n                \"name\": {\n                  \"sd\": true\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n}".toRequestBody(mediaType)
+    val body = "{\n  \"issuerKey\": {\n    \"type\": \"jwk\",\n    \"jwk\": \"{\\\"kty\\\":\\\"OKP\\\",\\\"d\\\":\\\"jQGuwJkF6umOyX4dSv_bRVozjKRc2NvPg1JSt39PaHo\\\",\\\"crv\\\":\\\"Ed25519\\\",\\\"kid\\\":\\\"ByUineP2PKbozXLH8nJiYrXUIxX5CjvinipFBBBCOi4\\\",\\\"x\\\":\\\"6zAA6R5vwH-WnAFh8ZSEIrF7sqG7T8BiuiQQhxvB4OQ\\\"}\"\n  },\n  \"issuerDid\": \"did:jwk:eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5Iiwia2lkIjoiQnlVaW5lUDJQS2JvelhMSDhuSmlZclhVSXhYNUNqdmluaXBGQkJCQ09pNCIsIngiOiI2ekFBNlI1dndILVduQUZoOFpTRUlyRjdzcUc3VDhCaXVpUVFoeHZCNE9RIn0\",\n  \"vc\": {\n    \"@context\": [\n      \"https://www.w3.org/2018/credentials/v1\",\n      \"https://www.w3.org/2018/credentials/examples/v1\"\n    ],\n    \"id\": \"http://example.gov/credentials/3732\",\n    \"type\": [\n      \"VerifiableCredential\",\n      \"UniversityDegree\"\n    ],\n    \"issuer\": {\n      \"id\": \"did:web:vc.transmute.world\"\n    },\n    \"issuanceDate\": \"2024-03-27T00:14:12.164Z\",\n    \"credentialSubject\": {\n      \"id\": \"did:example:ebfeb1f712ebc6f1c276e12ec21\",\n      \"degree\": {\n        \"type\": \"BachelorDegree\",\n        \"name\": \"Bachelor of Science and Arts\"\n      }\n    }\n  },\n  \"mapping\": {\n    \"id\": \"<uuid>\",\n    \"issuer\": {\n      \"id\": \"<issuerDid>\"\n    },\n    \"credentialSubject\": {\n      \"id\": \"<subjectDid>\"\n    },\n    \"issuanceDate\": \"<timestamp>\",\n    \"expirationDate\": \"<timestamp-in:365d>\"\n  }\n}".toRequestBody(mediaType)
     val body2 = "{\n  \"issuerKey\": {\n    \"type\": \"jwk\",\n    \"jwk\": \"{\\\"kty\\\":\\\"OKP\\\",\\\"d\\\":\\\"jQGuwJkF6umOyX4dSv_bRVozjKRc2NvPg1JSt39PaHo\\\",\\\"crv\\\":\\\"Ed25519\\\",\\\"kid\\\":\\\"ByUineP2PKbozXLH8nJiYrXUIxX5CjvinipFBBBCOi4\\\",\\\"x\\\":\\\"6zAA6R5vwH-WnAFh8ZSEIrF7sqG7T8BiuiQQhxvB4OQ\\\"}\"\n  },\n  \"issuerDid\": \"did:jwk:eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5Iiwia2lkIjoiQnlVaW5lUDJQS2JvelhMSDhuSmlZclhVSXhYNUNqdmluaXBGQkJCQ09pNCIsIngiOiI2ekFBNlI1dndILVduQUZoOFpTRUlyRjdzcUc3VDhCaXVpUVFoeHZCNE9RIn0\",\n  \"vc\": {\n    \"@context\": [\n      \"https://www.w3.org/2018/credentials/v1\",\n      \"https://www.w3.org/2018/credentials/examples/v1\"\n    ],\n    \"id\": \"http://example.gov/credentials/3732\",\n    \"type\": [\n      \"VerifiableCredential\",\n      \"UniversityDegree\"\n    ],\n    \"issuer\": {\n      \"id\": \"did:web:vc.transmute.world\"\n    },\n    \"issuanceDate\": \"2024-03-27T00:14:12.164Z\",\n    \"credentialSubject\": {\n      \"id\": \"did:example:ebfeb1f712ebc6f1c276e12ec21\",\n      \"degree\": {\n        \"type\": \"BachelorDegree\",\n        \"name\": \"Bachelor of Science and Arts\"\n      }\n    }\n  },\n  \"mapping\": {\n    \"id\": \"<uuid>\",\n    \"issuer\": {\n      \"id\": \"<issuerDid>\"\n    },\n    \"credentialSubject\": {\n      \"id\": \"<subjectDid>\"\n    },\n    \"issuanceDate\": \"<timestamp>\",\n    \"expirationDate\": \"<timestamp-in:365d>\"\n  },\n  \"selectiveDisclosure\": {\n  \"fields\": {\n    \"issuanceDate\": {\n      \"sd\": true\n    },\n    \"credentialSubject\": {\n      \"sd\": false,\n      \"children\": {\n        \"fields\": {\n          \"degree\": {\n            \"sd\": false,\n            \"children\": {\n              \"fields\": {\n                \"name\": {\n                  \"sd\": true\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n}"
     println(body2)
     val request = Request.Builder()
-        //.url("http://localhost:7002/openid4vc/sdjwt/issue")
-        .url("http://localhost:7002/openid4vc/sdjwt/issue")
-        .post(body)
+        .url("http://localhost:7002/openid4vc/mdoc/issue")
+        .post(drivingLicenseVerificableCredentailRequestBody)
         .addHeader("accept", "text/plain")
         .addHeader("Content-Type", "application/json")
         .build()
@@ -294,10 +333,8 @@ suspend fun main() {
     )
 
     val credential_request_payload = CredentialRequestPayload(
-        //credentialIdentifier = "UniversityDegree",
-        credentialIdentifier = "Iso18013DriversLicenseCredential",
-        //format = "jwt_vc_json",
-        format = "mso_mdoc",
+        credentialIdentifier = "UniversityDegree",
+        format = "jwt_vc_json",
         proof = jwt_proof_payload
     )
 
@@ -323,5 +360,8 @@ suspend fun main() {
     //val verificationResult = key.getPublicKey().verifyJws(signature)
 
     //print(verificationResult)
+
+
+
 
 }
