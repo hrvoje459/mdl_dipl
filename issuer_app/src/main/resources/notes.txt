@@ -1,0 +1,17 @@
+required properties
+    family_name              =>     string
+    given_name               =>     string
+    birth_Date               =>     full-date
+    issue_date               =>     full-date
+    expiry_date              =>     full-date
+    issuing_country          =>     string          (2 letter)
+    issuing_authority        =>     string          - name of issuing authority or issuing country
+    document_number          =>     string
+    driving_privileges       =>     object          7.4.4 iso standard
+    portrait                 =>     encoded string  7.4.2 iso standard
+    age_over_NN              =>     boolean         7.4.5 iso standard
+
+
+
+driving privileges:
+[{"vehicle_category_code": "A", "issue_date": 18013("2024-12-23")},{"vehicle_category_code": "B", "issue_date": 18013("2024-12-23")},{"vehicle_category_code": "C", "issue_date": 18013("2024-12-23"), "expiry_date": 18013("2020-01-01")}]
