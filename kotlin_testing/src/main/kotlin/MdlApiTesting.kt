@@ -227,7 +227,8 @@ suspend fun main (){
 
     println(URLDecoder.decode(response_body?.split("?")?.get(1)?.split("=")?.get(1),"UTF-8"))
 
-    val credential_offer_uri = URLDecoder.decode(response_body?.split("?")?.get(1)?.split("=")?.get(1),"UTF-8")
+    //val credential_offer_uri = URLDecoder.decode(response_body?.split("?")?.get(1)?.split("=")?.get(1),"UTF-8")
+    val credential_offer_uri = "http://localhost:7002/openid4vc/credentialOffer?id=f7e6fe37-694e-45b6-84dc-5b19d35f9ec9"
 
     println("OFFER URI: " + credential_offer_uri)
 
@@ -335,7 +336,8 @@ suspend fun main (){
     val credential_request_payload = CredentialRequestPayload(
         credentialIdentifier = "UniversityDegree",
         format = "jwt_vc_json",
-        proof = jwt_proof_payload
+        proof = jwt_proof_payload,
+        types = arrayOf("testhrv")
     )
 
     val credential_json = Json.encodeToString(CredentialRequestPayload.serializer(), credential_request_payload)

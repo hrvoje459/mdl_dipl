@@ -46,8 +46,9 @@ data class JwtPayload(
 data class CredentialRequestPayload(
     val credentialIdentifier: String,
     val proof: JWTProofPayload,
-    val format: String
+    val format: String,
     // Add other fields as needed
+    val types: Array<String>
 )
 
 @Serializable
@@ -298,7 +299,8 @@ suspend fun main() {
         credentialIdentifier = "Iso18013DriversLicenseCredential",
         //format = "jwt_vc_json",
         format = "mso_mdoc",
-        proof = jwt_proof_payload
+        proof = jwt_proof_payload,
+        types = arrayOf("testhrv")
     )
 
     val credential_json = Json.encodeToString(CredentialRequestPayload.serializer(), credential_request_payload)

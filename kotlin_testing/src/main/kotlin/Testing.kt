@@ -3,6 +3,8 @@ package fer.dipl.mdl
 import com.nimbusds.jose.jwk.*
 import com.nimbusds.jose.jwk.gen.JWKGenerator
 import com.nimbusds.jose.jwk.gen.OctetKeyPairGenerator
+import com.nimbusds.jose.util.X509CertChainUtils
+import com.nimbusds.jose.util.X509CertUtils
 import id.walt.crypto.keys.KeyType
 import id.walt.crypto.keys.jwk.JWKKey
 import id.walt.crypto.keys.jwk.JWKKeyMetadata
@@ -187,5 +189,6 @@ suspend fun main(){
     val decoded_cert = certificateFactory.generateCertificate(ByteArrayInputStream(der_bytes)) as X509Certificate
 
     //println(decoded_cert)
+
 
 }
