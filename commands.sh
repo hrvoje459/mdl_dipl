@@ -1,3 +1,5 @@
+colima start --network-address
+
 docker build -t waltid/issuer-api -f waltid-issuer-api/Dockerfile .
 docker run -p 7002:7002 waltid/issuer-api --webHost=0.0.0.0 --webPort=7002 --baseUrl=http://localhost:7002
 

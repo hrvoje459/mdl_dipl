@@ -38,6 +38,10 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
 
 
+    // JOSE
+    implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
+
+
 
 
 }
