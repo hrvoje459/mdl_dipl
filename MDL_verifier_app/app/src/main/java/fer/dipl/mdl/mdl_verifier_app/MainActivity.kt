@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
                 QrScanner(
                     onClose = { Logger.d("MAIN HRV", "close" ) },
                     qrCodeReturn = { qrtext ->
-                        Logger.d("MAIN HRV", "qrtext" + qrtext)
+                        Logger.d("MAIN HRV", "qr_text" + qrtext)
                         toast(qrtext)
                         val i: Intent = Intent(applicationContext, ConnectionActivity::class.java)
                         i.putExtra("qr_code_value", qrtext)
