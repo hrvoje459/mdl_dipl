@@ -17,6 +17,8 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven ("https://jitpack.io")
+        maven { url = uri("https://maven.walt.id/repository/waltid/") }
+
     }
 }
 

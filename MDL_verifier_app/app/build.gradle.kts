@@ -64,6 +64,17 @@ dependencies {
     implementation("com.android.identity:identity-credential:20231002")
     implementation("com.github.yuriy-budiyev:code-scanner:2.3.0")
 
+    //WALT ID LIBRARIES
+    implementation("id.walt.did:waltid-did:1.0.2403291506-SNAPSHOT"){
+        exclude("org.bouncycastle", "bcprov-jdk15on")
+        exclude("org.bouncycastle","bcpkix-lts8on")
+        exclude("org.bouncycastle","bcprov-lts8on")
+    }
+    implementation("id.walt:waltid-mdoc-credentials-jvm:1.0.2403291506-SNAPSHOT")
+
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.16.0")
+
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

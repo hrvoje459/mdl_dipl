@@ -114,8 +114,11 @@ class QRTransferHelper(private val context: Context) {
             Logger.d("MAIN RET", "onDeviceRequest")
             Logger.d("MAIN RET", String(p0))
 
+            val credential = DrivingCredentialRequest(context).getCredential(context)
 
-            deviceRetrievalHelper!!.sendDeviceResponse("delulu".toByteArray(), OptionalLong.empty())
+
+            //deviceRetrievalHelper!!.sendDeviceResponse("delulu".toByteArray(), OptionalLong.empty())
+            deviceRetrievalHelper!!.sendDeviceResponse(credential!!.toCBOR(), OptionalLong.empty())
 
             //ODO("Not yet implemented")
         }

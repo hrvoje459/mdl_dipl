@@ -3,7 +3,9 @@ package fer.dipl.mdl.mdl_verifier_app
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.nfc.NfcAdapter
+import androidx.core.content.ContextCompat
 import com.android.identity.android.mdoc.deviceretrieval.VerificationHelper
 //import com.android.identity.android.mdoc.transport.ConnectionMethodUdp
 import com.android.identity.android.mdoc.transport.DataTransportOptions
@@ -65,6 +67,12 @@ class VerifierTransferHelper private constructor(
         override fun onResponseReceived(deviceResponseBytes: ByteArray) {
             Logger.d(TAG, "onResponseReceived")
             Logger.d(TAG, String(deviceResponseBytes))
+
+            val i: Intent = Intent(context, MDLPresentationActivity::class.java)
+            i.putExtra("mdoc_bytes", deviceResponseBytes)
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ContextCompat.startActivity(context, i, null)
+
         }
 
         override fun onError(error_: Throwable) {
@@ -82,7 +90,7 @@ class VerifierTransferHelper private constructor(
 
         val connectionMethods = mutableListOf<ConnectionMethod>()
         val bleUuid = UUID.randomUUID()
-            connectionMethods.add(ConnectionMethodBle(
+        connectionMethods.add(ConnectionMethodBle(
                 false,
                 true,
                 null,

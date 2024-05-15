@@ -3,6 +3,7 @@ package fer.dipl.mdl.mdl_verifier_app
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Resources
 import android.os.Bundle
 import android.os.Looper
 import android.widget.Toast
@@ -10,13 +11,24 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -39,6 +51,9 @@ import com.budiyev.android.codescanner.ErrorCallback
 import com.budiyev.android.codescanner.ScanMode
 
 class MainActivity : ComponentActivity() {
+
+    //private lateinit var transferHelper: TransferHelper
+
     private val permissionsLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
             permissions.entries.forEach {
@@ -94,7 +109,9 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        setContent {
+        //transferHelper = TransferHelper.getInstance(applicationContext, this)
+
+        /*setContent {
             MDL_verifier_appTheme {
                 // A surface container using the 'background' color from the theme
                 /*Surface(
@@ -103,20 +120,124 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Greeting("Android")
                 }*/
-                QrScanner(
-                    onClose = { Logger.d("MAIN HRV", "close" ) },
-                    qrCodeReturn = { qrtext ->
-                        Logger.d("MAIN HRV", "qr_text" + qrtext)
-                        toast(qrtext)
+                Column {
+                    /*QrScanner(
+                        onClose = { Logger.d("MAIN HRV", "close" ) },
+                        qrCodeReturn = { qrtext ->
+                            Logger.d("MAIN HRV", "qr_text" + qrtext)
+                            toast(qrtext)
+                            val i: Intent = Intent(applicationContext, ConnectionActivity::class.java)
+                            i.putExtra("qr_code_value", qrtext)
+                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            ContextCompat.startActivity(applicationContext, i, null)
+                        },
+                        modifier = Modifier
+                            .background(MaterialTheme.colorScheme.background)
+                            //.fillMaxSize()
+                            .height(Resources.getSystem().displayMetrics.heightPixels.dp - 1500.dp)
+                    )*/
+                    Text(text = "Press button for engagement")
+                    Button(onClick = {
                         val i: Intent = Intent(applicationContext, ConnectionActivity::class.java)
-                        i.putExtra("qr_code_value", qrtext)
+                        //i.putExtra("qr_code_value", qrtext)
                         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         ContextCompat.startActivity(applicationContext, i, null)
+                    }) {
+
+                    }
+                    //Text(text = "SCAN QR OR TAP THE BACK FOR NFC ENGAGEMENT")
+                }
+
+            }
+        }*/
+        setContent {
+            MDL_verifier_appTheme {
+                // A surface container using the 'background' color from the theme
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    Scaffold(
+                        topBar = {},
+                        bottomBar = {
+                            BottomAppBar(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                            ) {
+                                /*Text(
+                                    modifier = Modifier
+                                        .fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                    text = "Bottom app bar",
+                                )*/
+                                Row {
+                                    Button(
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            Logger.d("MAIN HRV", "buttons")
+                                            val i: Intent = Intent(applicationContext, NFCScanActivity::class.java)
+                                            //i.putExtra("qr_code_value", transferHelper.qrEng.value)
+                                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            ContextCompat.startActivity(applicationContext, i, null)
+                                        }
+                                    ) {
+                                        Text(text = "NFC ENGAGEMENT")
+                                        Icon(Icons.Default.Add, contentDescription = "Add")
+                                    }
+                                    Button(
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            Logger.d("MAIN HRV", "buttons1")
+                                            /*val transferHelper = TransferHelper.getInstance(applicationContext)
+                                            if (transferHelper.qrEng.value == ""){
+                                                Logger.d("MAIN HRV", "button its null")
+                                            }else{
+                                                Logger.d("MAIN HRV", transferHelper.qrEng.value!!)
+                                                val i: Intent = Intent(applicationContext, QRPresentationActivity::class.java)
+                                                i.putExtra("qr_code_value", transferHelper.qrEng.value)
+                                                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                ContextCompat.startActivity(applicationContext, i, null)
+                                            }*/
+                                            val i: Intent = Intent(applicationContext, QRScanActivity::class.java)
+                                            //i.putExtra("qr_code_value", transferHelper.qrEng.value)
+                                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            ContextCompat.startActivity(applicationContext, i, null)
+                                        }
+                                    ) {
+                                        Text(text = "QR CODE")
+                                        Icon(Icons.Default.Add, contentDescription = "Add")
+                                    }
+                                }
+
+                            }
                         },
-                    modifier = Modifier
-                        .background(MaterialTheme.colorScheme.background)
-                        .fillMaxSize()
-                )
+                        /*floatingActionButton = {
+                            FloatingActionButton(onClick = {
+                                Logger.d("MAIN HRV", "buttons")
+                                }
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add")
+                            }
+                        }*/
+
+
+                    ){
+                            innerPadding ->
+
+                        Column(
+                            modifier = Modifier
+                                .padding(innerPadding)
+                                .verticalScroll(
+                                    rememberScrollState()
+                                ),
+                            verticalArrangement = Arrangement.spacedBy(1.dp),
+
+                            ) {
+
+                            //GreetingPreview2("Mile " + value, bmp)
+                        }
+                    }
+                }
             }
         }
     }
@@ -139,42 +260,6 @@ fun GreetingPreview() {
 }
 
 
-@Composable
-private fun QrScanner(
-    qrCodeReturn: (String) -> Unit,
-    onClose: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-    ) {
-        Box(Modifier.padding(horizontal = 20.dp, vertical = 20.dp)) {
-            AndroidView(
-                modifier = Modifier,
-                factory = {
-                    CodeScannerView(it).apply {
-                        val codeScanner = CodeScanner(it, this).apply {
-                            isAutoFocusEnabled = true
-                            isAutoFocusButtonVisible = false
-                            scanMode = ScanMode.SINGLE
-                            decodeCallback = DecodeCallback { result ->
-                                qrCodeReturn.invoke(result.text)
-                                releaseResources()
-                            }
-                            errorCallback = ErrorCallback {
-                                releaseResources()
-                            }
-                            camera = CodeScanner.CAMERA_BACK
-                            isFlashEnabled = false
-                        }
-                        codeScanner.startPreview()
-                    }
-                },
-            )
-        }
-        CloseBtn(onClick = onClose)
-    }
-}
 @Composable
 private fun CloseBtn(
     onClick: () -> Unit,

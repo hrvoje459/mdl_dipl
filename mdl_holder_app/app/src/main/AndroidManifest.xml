@@ -57,6 +57,12 @@
             android:label="@string/app_name"
             android:theme="@style/Theme.MDL_holder_app">
         </activity>
+        <activity
+            android:name=".RequestCredentialActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_holder_app">
+        </activity>
 
 
         <service

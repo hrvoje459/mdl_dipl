@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    kotlin("plugin.serialization") version "1.9.23"
 }
 
 android {
@@ -47,8 +48,8 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
-}
 
+}
 
 dependencies {
 
@@ -66,6 +67,20 @@ dependencies {
     implementation("com.github.yuriy-budiyev:code-scanner:2.3.0")
     // https://mvnrepository.com/artifact/com.google.zxing/core
     implementation("com.google.zxing:core:3.3.3")
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
+
+
+    // WALT ID LIBRARIES
+    implementation("id.walt.did:waltid-did:1.0.2403291506-SNAPSHOT"){
+        exclude("org.bouncycastle", "bcprov-jdk15on")
+        exclude("org.bouncycastle","bcpkix-lts8on")
+        exclude("org.bouncycastle","bcprov-lts8on")
+    }
+    implementation("id.walt:waltid-mdoc-credentials-jvm:1.0.2403291506-SNAPSHOT")
+
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.16.0")
 
 
     testImplementation(libs.junit)
