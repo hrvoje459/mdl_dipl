@@ -12,3 +12,12 @@ data class MyProperties(
         println("TESTING PROP 1: $country_code")
     }
 }
+
+@ConfigurationProperties(prefix = "credential.issuer")
+data class CredentialIssuer(
+    var base_url: String = "",
+){
+    init {
+        println("TESTING PROP 1: $base_url")
+    }
+}

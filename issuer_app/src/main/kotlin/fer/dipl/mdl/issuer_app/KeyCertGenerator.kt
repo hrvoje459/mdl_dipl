@@ -34,6 +34,7 @@ class KeyCertGenerator() {
     private var did = ""
     private var issuer_jwk = ""
 
+
     suspend fun getDid(): String{
         if (initialized == false){
             KeyCertGenerator()
@@ -105,7 +106,7 @@ class KeyCertGenerator() {
             // create root CA certificate
             rootCaCertificate = X509v3CertificateBuilder(
                 X500Name("CN=MDOC ROOT CSP"), BigInteger.valueOf(SecureRandom().nextLong()),
-                Date(), Date(System.currentTimeMillis() + 24L * 3600 * 1000), X500Name("CN=MDOC ROOT CA"),
+                Date(), Date(System.currentTimeMillis() + 24L * 3600 * 1000), X500Name("CN=MDOC ROOT CA " + env?.country_code),
                 SubjectPublicKeyInfo.getInstance(rootECKey.toECPublicKey().encoded)
             ) .addExtension(Extension.basicConstraints, true, BasicConstraints(false)) // TODO: Should be CA! Should not pass validation when false!
                 .addExtension(Extension.keyUsage, true, KeyUsage(KeyUsage.keyCertSign or KeyUsage.cRLSign)) // Key usage not validated.
@@ -114,6 +115,8 @@ class KeyCertGenerator() {
                 }
 
             //println(rootCaCertificate)
+            //rootJWKFile.createNewFile()
+            //rootCertFile.createNewFile()
 
             rootJWKFile.writeText(rootCaKey.exportJWK())
             rootCertFile.writeText(X509CertUtils.toPEMString(rootCaCertificate))
@@ -148,7 +151,7 @@ class KeyCertGenerator() {
             // create intermediate CA certificate
             intermediateCaCertificate = X509v3CertificateBuilder(
                 X500Name("CN=MDOC ROOT CA"), BigInteger.valueOf(SecureRandom().nextLong()),
-                Date(), Date(System.currentTimeMillis() + 24L * 3600 * 1000), X500Name("CN=MDOC Iterm CA"),
+                Date(), Date(System.currentTimeMillis() + 24L * 3600 * 1000), X500Name("CN=MDOC Iterm CA " + env?.country_code),
                 SubjectPublicKeyInfo.getInstance(intermediateECKey.toECPublicKey().encoded)
             ) .addExtension(Extension.basicConstraints, true, BasicConstraints(false)) // TODO: Should be CA! Should not pass validation when false!
                 .addExtension(Extension.keyUsage, true, KeyUsage(KeyUsage.keyCertSign or KeyUsage.cRLSign)) // Key usage not validated.
@@ -193,7 +196,7 @@ class KeyCertGenerator() {
             // create issuer certificate
             issuerCertificate = X509v3CertificateBuilder(
                 X500Name("CN=MDOC Iterm CA"), BigInteger.valueOf(SecureRandom().nextLong()),
-                Date(), Date(System.currentTimeMillis() + 24L * 3600 * 1000), X500Name("CN=MDOC Issuer"),
+                Date(), Date(System.currentTimeMillis() + 24L * 3600 * 1000), X500Name("CN=MDOC Issuer " + env?.country_code),
                 SubjectPublicKeyInfo.getInstance(issuerECKey.toECPublicKey().encoded)
             ) .addExtension(Extension.basicConstraints, true, BasicConstraints(false)) // TODO: Should be CA! Should not pass validation when false!
                 .addExtension(Extension.keyUsage, true, KeyUsage(KeyUsage.keyCertSign or KeyUsage.cRLSign)) // Key usage not validated.

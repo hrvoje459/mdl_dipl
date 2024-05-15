@@ -19,6 +19,8 @@ repositories {
 	maven { url = uri("https://maven.walt.id/repository/waltid/") }
 }
 
+
+
 dependencies {
 	//implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-web")
@@ -53,7 +55,16 @@ dependencies {
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
 	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.8.0")
 
+	implementation("org.springframework.boot:spring-boot-starter-log4j2")
+	modules {
+		module("org.springframework.boot:spring-boot-starter-logging") {
+			replacedBy("org.springframework.boot:spring-boot-starter-log4j2", "Use Log4j2 instead of Logback")
+		}
+	}
+
 }
+
+
 
 tasks.withType<KotlinCompile> {
 	kotlinOptions {

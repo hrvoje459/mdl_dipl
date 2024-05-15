@@ -53,7 +53,7 @@ data class DataElementHrv(
     val digestID: String,
     val random: ByteArray,
     val elementIdentifier: String,
-    val elementValue: String
+    val elementValue: Any
 ){
     // Ensure a primary constructor is available
     constructor() : this("", byteArrayOf(), "","")

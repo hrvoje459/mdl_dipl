@@ -18,8 +18,12 @@ class StringResponse( val credential_offer_uri: String)
 
 @RestController
 class InitRestController {
-    @Value("\${issuer.country_code}")
-    private val cc: String? = null
+
+    @Autowired
+    private val env: MyProperties? = null
+
+    @Autowired
+    private val credentialIssuer: CredentialIssuer? = null
 
     @Autowired
     private val key = KeyCertGenerator()
@@ -166,7 +170,7 @@ class InitRestController {
         //val body2 = "{\n  \"issuerKey\": {\n    \"type\": \"jwk\",\n    \"jwk\": \"{\\\"kty\\\":\\\"OKP\\\",\\\"d\\\":\\\"jQGuwJkF6umOyX4dSv_bRVozjKRc2NvPg1JSt39PaHo\\\",\\\"crv\\\":\\\"Ed25519\\\",\\\"kid\\\":\\\"ByUineP2PKbozXLH8nJiYrXUIxX5CjvinipFBBBCOi4\\\",\\\"x\\\":\\\"6zAA6R5vwH-WnAFh8ZSEIrF7sqG7T8BiuiQQhxvB4OQ\\\"}\"\n  },\n  \"issuerDid\": \"did:jwk:eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5Iiwia2lkIjoiQnlVaW5lUDJQS2JvelhMSDhuSmlZclhVSXhYNUNqdmluaXBGQkJCQ09pNCIsIngiOiI2ekFBNlI1dndILVduQUZoOFpTRUlyRjdzcUc3VDhCaXVpUVFoeHZCNE9RIn0\",\n  \"vc\": {\n    \"@context\": [\n      \"https://www.w3.org/2018/credentials/v1\",\n      \"https://www.w3.org/2018/credentials/examples/v1\"\n    ],\n    \"id\": \"http://example.gov/credentials/3732\",\n    \"type\": [\n      \"VerifiableCredential\",\n      \"UniversityDegree\"\n    ],\n    \"issuer\": {\n      \"id\": \"did:web:vc.transmute.world\"\n    },\n    \"issuanceDate\": \"2024-03-27T00:14:12.164Z\",\n    \"credentialSubject\": {\n      \"id\": \"did:example:ebfeb1f712ebc6f1c276e12ec21\",\n      \"degree\": {\n        \"type\": \"BachelorDegree\",\n        \"name\": \"Bachelor of Science and Arts\"\n      }\n    }\n  },\n  \"mapping\": {\n    \"id\": \"<uuid>\",\n    \"issuer\": {\n      \"id\": \"<issuerDid>\"\n    },\n    \"credentialSubject\": {\n      \"id\": \"<subjectDid>\"\n    },\n    \"issuanceDate\": \"<timestamp>\",\n    \"expirationDate\": \"<timestamp-in:365d>\"\n  },\n  \"selectiveDisclosure\": {\n  \"fields\": {\n    \"issuanceDate\": {\n      \"sd\": true\n    },\n    \"credentialSubject\": {\n      \"sd\": false,\n      \"children\": {\n        \"fields\": {\n          \"degree\": {\n            \"sd\": false,\n            \"children\": {\n              \"fields\": {\n                \"name\": {\n                  \"sd\": true\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}\n}"
         //println(body2)
         val request = Request.Builder()
-            .url("http://localhost:7002/openid4vc/mdoc/issue")
+            .url(credentialIssuer?.base_url + "/openid4vc/mdoc/issue")
             .post(drivingLicenseCredentailRequest.toRequestBody())
             .addHeader("accept", "text/plain")
             .addHeader("Content-Type", "application/json")

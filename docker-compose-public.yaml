@@ -1,0 +1,132 @@
+---
+volumes:
+  postgres_data_keycloak_slovenski:
+    driver: local
+  postgres_data_keycloak_hrvatski:
+    driver: local
+
+services:
+  postgres_keycloak_slovenski:
+    hostname: postgres_keycloak_slovenski
+    image: postgres:15-alpine3.17
+    volumes:
+      - postgres_data_keycloak_slovenski:/var/lib/postgresql/data
+    # ports:
+    #   - 5432:5432
+    environment:
+      POSTGRES_DB: <secret>
+      POSTGRES_USER: <secret>
+      POSTGRES_PASSWORD: <secret>
+
+  
+  postgres_keycloak_hrvatski:
+    hostname: postgres_keycloak_hrvatski
+    image: postgres:15-alpine3.17
+    volumes:
+      - postgres_data_keycloak_hrvatski:/var/lib/postgresql/data
+    # ports:
+    #   - 5432:5432
+    environment:
+      POSTGRES_DB: <secret>
+      POSTGRES_USER: <secret>
+      POSTGRES_PASSWORD: <secret>
+
+  keycloak-slo:
+    hostname: keycloak-slo
+    image: bitnami/keycloak:21.0.2
+    depends_on:
+      - postgres_keycloak_slovenski
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail -k https://keycloak-slo:8447/auth/realms/master/.well-known/openid-configuration"]
+    ports:
+      - 8082:8082
+      #- 8447:8447
+    #volumes:
+    #  - ./certs/keycloak/keycloak_keystore.p12:/opt/bitnami/keycloak/certs/keystore.p12
+    #  - ./certs/cert_authority/client.truststore.p12:/opt/bitnami/keycloak/certs/truststore.p12
+    environment:
+      KEYCLOAK_DATABASE_VENDOR: <secret>
+      KEYCLOAK_DATABASE_HOST: <secret>
+      KEYCLOAK_DATABASE_NAME: <secret>
+      KEYCLOAK_DATABASE_USER: keycloak
+      KEYCLOAK_DATABASE_PASSWORD: <secret>
+
+      KEYCLOAK_ADMIN_USER: <secret>
+      KEYCLOAK_ADMIN_PASSWORD: <secret>
+      KC_HTTP_RELATIVE_PATH: "<secret>"
+      KEYCLOAK_HTTP_PORT: 8082
+
+  keycloak-hrv:
+    hostname: keycloak-hrv
+    image: bitnami/keycloak:21.0.2
+    depends_on:
+      - postgres_keycloak_hrvatski
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail -k https://keycloak-hrv:8447/auth/realms/master/.well-known/openid-configuration"]
+    ports:
+      - 8083:8083
+      #- 8447:8447
+    #volumes:
+    #  - ./certs/keycloak/keycloak_keystore.p12:/opt/bitnami/keycloak/certs/keystore.p12
+    #  - ./certs/cert_authority/client.truststore.p12:/opt/bitnami/keycloak/certs/truststore.p12
+    environment:
+      KEYCLOAK_DATABASE_VENDOR: <secret>
+      KEYCLOAK_DATABASE_HOST: <secret>
+      KEYCLOAK_DATABASE_NAME: <secret>
+      KEYCLOAK_DATABASE_USER: <secret>
+      KEYCLOAK_DATABASE_PASSWORD: <secret>
+
+      KEYCLOAK_ADMIN_USER: <secret>
+      KEYCLOAK_ADMIN_PASSWORD: <secret>
+      KC_HTTP_RELATIVE_PATH: "<secret>"
+      KEYCLOAK_HTTP_PORT: 8083
+
+  not-issuer-api-hr.<domain>:
+    hostname: not-issuer-api-hr.<domain>
+    image: hrvoje45/issuer-api:1.0.1
+    ports:
+      - 7002:7002
+    command: ["--webHost=0.0.0.0", "--webPort=7002", "--baseUrl=https://<secret>"]
+
+  issuer-backend-hr.<domain>:
+    hostname: issuer-backend-hr.<domain>
+    image: hrvoje45/issuer_backend:1.0.2
+    ports:
+      - 8001:8080
+    depends_on:
+      - keycloak-hrv
+    volumes:
+      - ./issuer_secrets_hr:/workspace/app/issuer_secrets
+    environment:
+      CREDENTIAL_ISSUER_URL: https://issuer-api-hr.<domain>
+      COUNTRY_CODE: HR
+
+      #IDP CONFIG
+      CLIENT_ID: <secret>      
+      CLIENT_SECRET: <secret>
+      ISSUER_URI: https://hrv-idp.<domain>/auth/realms/MDL
+
+  not-issuer-api-slo.<domain>:
+    hostname: not-issuer-api-slo.<domain>
+    image: hrvoje45/issuer-api:1.0.1
+    ports:
+      - 7003:7003
+    command: ["--webHost=0.0.0.0", "--webPort=7003", "--baseUrl=https://<secret>"]
+
+  issuer-backend-slo.<domain>:
+    hostname: issuer-backend-slo.<domain>
+    image: hrvoje45/issuer_backend:1.0.2
+    ports:
+      - 8002:8080
+    depends_on:
+      - keycloak-slo
+    volumes:
+      - ./issuer_secrets_slo:/workspace/app/issuer_secrets
+    environment:
+      CREDENTIAL_ISSUER_URL: <secret>
+      COUNTRY_CODE: SI
+
+      #IDP CONFIG
+      CLIENT_ID: <secret>      
+      CLIENT_SECRET: <secret>
+      ISSUER_URI: https://slo-idp.<domain>/auth/realms/MDL
