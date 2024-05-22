@@ -127,6 +127,19 @@ class DrivingCredentialRequest(context: Context){
         }
 
     }
+    fun deleteCredential(context: Context): Boolean{
+
+        var bufferString: String = ""
+        try {
+            val readFile = File(context.filesDir, "mdoc_dir/mdoc.txt")
+            readFile.delete()
+            Logger.d("Credential", "DELETED")
+            return true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
 
     suspend fun requestCredential(username: String, password:String, country:String, context: Context):MDoc?{
         StrictMode.setThreadPolicy(policy)
@@ -216,6 +229,21 @@ class DrivingCredentialRequest(context: Context){
             this.user_key = user_key
 
             Logger.d("USER KEY", user_key.exportJWK())
+
+            val mdoc_dir: File = File(context.filesDir, "mdoc_dir")
+
+            if (!mdoc_dir.exists()) {
+                mdoc_dir.mkdir()
+            }
+            try {
+                val gpxfile = File(mdoc_dir, "user_key.txt")
+                val writer = FileWriter(gpxfile)
+                writer.append(user_key.exportJWK())
+                writer.flush()
+                writer.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
 
 

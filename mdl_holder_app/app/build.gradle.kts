@@ -81,6 +81,9 @@ dependencies {
     implementation("id.walt:waltid-mdoc-credentials-jvm:1.0.2403291506-SNAPSHOT")
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.16.0")
+    implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")
+    implementation("com.augustcellars.cose:cose-java:1.1.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
 
 
     testImplementation(libs.junit)

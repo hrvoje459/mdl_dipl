@@ -71,6 +71,11 @@ class MDLPresentationActivity : ComponentActivity() {
         val mdoc = extras!!.getByteArray("mdoc_bytes")
         val mdoc_mdoc = MDoc.fromCBOR(mdoc!!)
 
+
+        val issuer_signature_verified = extras.getBoolean ("issuer_signature_verified")
+        val device_signature_verified = extras.getBoolean ("device_signature_verified")
+        val issuer_certificate_verified = extras.getBoolean ("issuer_certificate_verified")
+
         Logger.d("PRESENTATION", mdoc_mdoc.toCBORHex())
 
 
@@ -92,7 +97,7 @@ class MDLPresentationActivity : ComponentActivity() {
         setContent {
             MDL_verifier_appTheme {
                 // A surface container using the 'background' color from the theme
-                MainContent(applicationContext = applicationContext, bitmap = bmp, mdoc_mdoc)
+                MainContent(applicationContext = applicationContext, bitmap = bmp, mdoc_mdoc, issuer_signature_verified, device_signature_verified, issuer_certificate_verified)
             }
         }
 
@@ -104,7 +109,7 @@ class MDLPresentationActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?){
+fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?, issuer_signature_verified:Boolean, device_signature_verified: Boolean, issuer_certificate_verified:Boolean){
     var driving_credential_present by remember { mutableStateOf(false) }
     var test_data by remember {
         mutableStateOf(0)
@@ -514,7 +519,7 @@ fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?){
                     }
                     Row {
                         Text(
-                            text = "Portrait:",
+                            text = "Verification:",
                             modifier = Modifier
                                 .padding(16.dp)
                                 .background(Color.Yellow)
@@ -523,31 +528,17 @@ fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?){
                             ,
                             textAlign = TextAlign.Center
                         )
-                        Text(
-                            text = portrait,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(2f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
                     }
                     Row {
-                        Button(
-                            onClick = {
-                                Logger.d("MAIN CONT", "DELETE CREDENTAIL")
-                            }
-                        ) {
-                            Text(text = "Delete credential")
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
-                        }
-
-
-
-
+                        Text(text = "Issuer signature verified: ${issuer_signature_verified}" )
                     }
+                    Row {
+                        Text(text = "Device signature verified: ${device_signature_verified}" )
+                    }
+                    Row {
+                        Text(text = "Issuer certificate verified: ${issuer_certificate_verified}" )
+                    }
+
 
 
 

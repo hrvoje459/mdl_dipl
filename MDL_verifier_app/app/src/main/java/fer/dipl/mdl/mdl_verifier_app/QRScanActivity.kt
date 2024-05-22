@@ -42,6 +42,21 @@ class QRScanActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         transferHelper = VerifierTransferHelper.getInstance(applicationContext, this)
+
+        val extras = intent.extras
+
+        val test1 = extras!!.getStringArrayList("requested_items")
+
+        test1!!.forEach {
+            Logger.d("Requested", it)
+        }
+
+
+
+        //Logger.d("ITEMS", extras!!.get("requested_items"))
+
+        transferHelper.setRequestedItems(extras!!.getStringArrayList("requested_items")!!.toTypedArray())
+
         /*val extras = intent.extras
 
         var verificationHelper: VerificationHelper? = null

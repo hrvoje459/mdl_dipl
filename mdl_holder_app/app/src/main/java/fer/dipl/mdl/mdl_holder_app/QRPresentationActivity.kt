@@ -266,7 +266,7 @@ class QRPresentationActivity: ComponentActivity() {
         }
     }
 
-    @Override
+    /*@Override
     override fun onStop() {
         super.onStop()
         QRTransferHelper.kill()
@@ -274,7 +274,7 @@ class QRPresentationActivity: ComponentActivity() {
         transferHelper.deviceRetrievalHelper?.disconnect()
 
         Logger.d("MAIN DESTROY", "on QR exit")
-    }
+    }*/
 }
 
 

@@ -94,7 +94,7 @@ fun RequestForm(applicationContext: Context){
     ) {
         Scaffold(
             topBar = {},
-            bottomBar = {
+            /*bottomBar = {
                 BottomAppBar(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.primary,
@@ -133,7 +133,7 @@ fun RequestForm(applicationContext: Context){
                     }
 
                 }
-            },
+            },*/
             /*floatingActionButton = {
                 FloatingActionButton(onClick = {
                     Logger.d("MAIN HRV", "buttons")
@@ -263,6 +263,13 @@ fun RequestForm(applicationContext: Context){
                                     }
                                     val testcredential = DrivingCredentialRequest(applicationContext).requestCredential(username, password, selectedCountry, applicationContext)
                                     println(testcredential)
+
+                                    if (testcredential != null){
+                                        val i: Intent = Intent(applicationContext, MainActivity::class.java)
+                                        //i.putExtra("qr_code_value", transferHelper.qrEng.value)
+                                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        ContextCompat.startActivity(applicationContext, i, null)
+                                    }
                                 }
 
 

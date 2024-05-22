@@ -257,6 +257,8 @@ fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?){
         mutableStateOf(0)
     }
 
+
+
     var family_name = ""
     var given_name:String = ""
     var portrait: String = ""
@@ -274,6 +276,7 @@ fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?){
     var portrait_image: Bitmap = bitmap
 
     if(credential != null){
+        driving_credential_present = true
         Logger.d("CREDENTIAL ALREADY EXISTS", credential!!.issuerSigned.nameSpaces?.keys.toString())
         credential!!.issuerSigned.nameSpaces?.get("org.iso.18013.5.1")?.forEach {
             Logger.d("NAME SPACE ITEAM", it.decode().value.toString())
@@ -359,52 +362,55 @@ fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?){
         Scaffold(
             topBar = {},
             bottomBar = {
-                BottomAppBar(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    /*Text(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        text = "Bottom app bar",
-                    )*/
-                    Row {
-                        Button(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                Logger.d("MAIN HRV", "buttons")
-                                val i: Intent = Intent(applicationContext, NFCPresentationActivity::class.java)
-                                //i.putExtra("qr_code_value", transferHelper.qrEng.value)
-                                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                ContextCompat.startActivity(applicationContext, i, null)
-                            }
-                        ) {
-                            Text(text = "NFC ENGAGEMENT")
-                            Icon(Icons.Default.Add, contentDescription = "Add")
-                        }
-                        Button(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                Logger.d("MAIN HRV", "buttons1")
-                                val transferHelper = QRTransferHelper.getInstance(applicationContext)
-                                if (transferHelper.qrEng.value == ""){
-                                    Logger.d("MAIN HRV", "button its null")
-                                }else{
-                                    Logger.d("MAIN HRV", transferHelper.qrEng.value!!)
-                                    val i: Intent = Intent(applicationContext, QRPresentationActivity::class.java)
-                                    i.putExtra("qr_code_value", transferHelper.qrEng.value)
+                if (driving_credential_present){
+                    BottomAppBar(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                    ) {
+                        /*Text(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            textAlign = TextAlign.Center,
+                            text = "Bottom app bar",
+                        )*/
+                        Row {
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    Logger.d("MAIN HRV", "buttons")
+                                    val i: Intent = Intent(applicationContext, NFCPresentationActivity::class.java)
+                                    //i.putExtra("qr_code_value", transferHelper.qrEng.value)
                                     i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     ContextCompat.startActivity(applicationContext, i, null)
                                 }
+                            ) {
+                                Text(text = "NFC ENGAGEMENT")
+                                Icon(Icons.Default.Add, contentDescription = "Add")
                             }
-                        ) {
-                            Text(text = "QR CODE")
-                            Icon(Icons.Default.Add, contentDescription = "Add")
+                            Button(
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    Logger.d("MAIN HRV", "buttons1")
+                                    val transferHelper = QRTransferHelper.getInstance(applicationContext)
+                                    if (transferHelper.qrEng.value == ""){
+                                        Logger.d("MAIN HRV", "button its null")
+                                    }else{
+                                        Logger.d("MAIN HRV", transferHelper.qrEng.value!!)
+                                        val i: Intent = Intent(applicationContext, QRPresentationActivity::class.java)
+                                        i.putExtra("qr_code_value", transferHelper.qrEng.value)
+                                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        ContextCompat.startActivity(applicationContext, i, null)
+                                    }
+                                }
+                            ) {
+                                Text(text = "QR CODE")
+                                Icon(Icons.Default.Add, contentDescription = "Add")
+                            }
                         }
-                    }
 
+                    }
                 }
+
             },
             /*floatingActionButton = {
                 FloatingActionButton(onClick = {
@@ -448,255 +454,263 @@ fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?){
                     verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Card (
-                            modifier = Modifier
-                                //.size(width = 240.dp, height = 100.dp)
-                                .fillMaxWidth()
-                                .padding(10.dp)
-                                .verticalScroll(rememberScrollState())
+                        if (driving_credential_present){
+                            Card (
+                                modifier = Modifier
+                                    //.size(width = 240.dp, height = 100.dp)
+                                    .fillMaxWidth()
+                                    .padding(10.dp)
+                                    .verticalScroll(rememberScrollState())
                                 //.align(Alignment.CenterHorizontally)
                                 ,
-                        ){
-                            Row (
-                                modifier = Modifier
-                                    .height(150.dp)
-                                    .background(Color.Cyan)
-                                    .fillMaxWidth()
-                                    .align(Alignment.CenterHorizontally),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
                             ){
-                                Image(
-                                    //bitmap = bitmap.asImageBitmap(),
-                                    //bitmap = credential == null ? portrait_image.asImageBitmap(),
-                                    bitmap = if (credential == null){bitmap.asImageBitmap()}else{portrait_image.asImageBitmap()},
-                                    contentDescription = "some useful description",
+                                Row (
                                     modifier = Modifier
-                                        //.width((Resources.getSystem().displayMetrics.widthPixels
-                                        //        / Resources.getSystem().displayMetrics.densityDpi) .dp)
-                                        .size(125.dp)
-                                    //.align(Alignment.CenterVertically)
-                                    //.padding(10.dp)
-                                )
-                            }
+                                        .height(150.dp)
+                                        .background(Color.Cyan)
+                                        .fillMaxWidth()
+                                        .align(Alignment.CenterHorizontally),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ){
+                                    Image(
+                                        //bitmap = bitmap.asImageBitmap(),
+                                        //bitmap = credential == null ? portrait_image.asImageBitmap(),
+                                        bitmap = if (credential == null){bitmap.asImageBitmap()}else{portrait_image.asImageBitmap()},
+                                        contentDescription = "some useful description",
+                                        modifier = Modifier
+                                            //.width((Resources.getSystem().displayMetrics.widthPixels
+                                            //        / Resources.getSystem().displayMetrics.densityDpi) .dp)
+                                            .size(125.dp)
+                                        //.align(Alignment.CenterVertically)
+                                        //.padding(10.dp)
+                                    )
+                                }
 
-                            Row {
-                                Text(
-                                    text = "Given name:",
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(1f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = given_name,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(2f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            Row {
-                                Text(
-                                    text = "Family name:",
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(1f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = family_name,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(2f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            Row {
-                                Text(
-                                    text = "Birth date:",
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(1f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = birth_date,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(2f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            Row {
-                                Text(
-                                    text = "Expiry date:",
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(1f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = expiry_date,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(2f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            Row {
-                                Text(
-                                    text = "Issue date:",
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(1f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = issue_date,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(2f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                                Row {
+                                    Text(
+                                        text = "Given name:",
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(1f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = given_name,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(2f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                Row {
+                                    Text(
+                                        text = "Family name:",
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(1f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = family_name,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(2f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                Row {
+                                    Text(
+                                        text = "Birth date:",
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(1f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = birth_date,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(2f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                Row {
+                                    Text(
+                                        text = "Expiry date:",
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(1f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = expiry_date,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(2f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                Row {
+                                    Text(
+                                        text = "Issue date:",
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(1f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = issue_date,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(2f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
 
-                            Row {
-                                Text(
-                                    text = "Issuing country:",
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(1f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = issuing_country,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(2f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            Row {
-                                Text(
-                                    text = "Issuing authority:",
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(1f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = issuing_authority,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(2f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            Row {
-                                Text(
-                                    text = "Driving privileges:",
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(1f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = driving_privileges,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(2f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            Row {
-                                Text(
-                                    text = "Portrait:",
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(1f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = portrait,
-                                    modifier = Modifier
-                                        .padding(16.dp)
-                                        .background(Color.Yellow)
-                                        .width(200.dp)
-                                        .weight(2f)
-                                    ,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                            Row {
-                                Button(
-                                    onClick = {
-                                        Logger.d("MAIN CONT", "DELETE CREDENTAIL")
+                                Row {
+                                    Text(
+                                        text = "Issuing country:",
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(1f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = issuing_country,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(2f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                Row {
+                                    Text(
+                                        text = "Issuing authority:",
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(1f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = issuing_authority,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(2f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                Row {
+                                    Text(
+                                        text = "Driving privileges:",
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(1f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = driving_privileges,
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(2f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                Row {
+                                    Text(
+                                        text = "Counter:",
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(1f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Text(
+                                        text = test_data.toString(),
+                                        modifier = Modifier
+                                            .padding(16.dp)
+                                            .background(Color.Yellow)
+                                            .width(200.dp)
+                                            .weight(2f)
+                                        ,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                                Row {
+                                    Button(
+                                        onClick = {
+                                            Logger.d("MAIN CONT", "DELETE CREDENTAIL")
+                                            val deleted = DrivingCredentialRequest(applicationContext).deleteCredential(applicationContext)
+                                            if (deleted){
+                                                driving_credential_present = false
+                                            }
+                                            test_data++
+                                        }
+                                    ) {
+                                        Text(text = "Delete credential")
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete")
                                     }
-                                ) {
-                                    Text(text = "Delete credential")
-                                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+
+
+
+
                                 }
 
 
 
-
                             }
-
-
-
                         }
+
 
                     }
 

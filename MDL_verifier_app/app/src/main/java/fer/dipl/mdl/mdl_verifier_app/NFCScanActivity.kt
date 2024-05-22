@@ -42,6 +42,12 @@ class NFCScanActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         transferHelper = VerifierTransferHelper.getInstance(applicationContext, this)
+
+
+        val extras = intent.extras
+
+        transferHelper.setRequestedItems(extras!!.getStringArrayList("requested_items")!!.toTypedArray())
+
         /*val extras = intent.extras
 
         var verificationHelper: VerificationHelper? = null
