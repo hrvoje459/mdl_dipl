@@ -1,4 +1,4 @@
-package fer.dipl.mdl.mdl_holder_app
+package fer.dipl.mdl.mdl_invalid_app.activities
 
 import android.content.Context
 import android.content.Intent
@@ -6,14 +6,13 @@ import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
 import android.os.Bundle
 import android.os.CancellationSignal
-import android.os.PersistableBundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.absolutePadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,6 +27,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -38,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,41 +47,42 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.modifier.modifierLocalConsumer
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.android.identity.util.Logger
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
-import fer.dipl.mdl.mdl_holder_app.ui.theme.MDL_holder_appTheme
+import fer.dipl.mdl.mdl_invalid_app.helpers.NFCTransferHelper
+import fer.dipl.mdl.mdl_invalid_app.helpers.QRTransferHelper
+import fer.dipl.mdl.mdl_invalid_app.MainActivity
+import fer.dipl.mdl.mdl_invalid_app.ui.theme.MDL_invalid_appTheme
 import id.walt.mdoc.dataretrieval.DeviceRequest
+import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.docrequest.MDocRequestBuilder
+import java.util.IllegalFormatCodePointException
 import java.util.OptionalLong
 
 class RequestApprovalActivity: ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
-
         val extras = intent.extras
-
-
-        //Logger.d("PRESENTATION", mdoc_mdoc.toCBORHex())
-        Logger.d("U APPROVALU SAM", "1")
 
         val mdoc_request = extras!!.getByteArray("mdoc_request")
         val initiator = extras!!.getString("initiator")
 
         setContent {
-            MDL_holder_appTheme {
+            MDL_invalid_appTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     RequestRadios(applicationContext, mdoc_request!!, initiator!!)
-
                 }
             }
         }
@@ -91,17 +93,13 @@ class RequestApprovalActivity: ComponentActivity() {
 
 
 @Composable
-private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc_request: ByteArray, initator: String)
+private fun RequestRadios(context: Context, mdoc_request: ByteArray, initator: String)
 {
-
     val request = DeviceRequest.fromCBOR(mdoc_request)
-    Logger.d("U APPROVALU SAM", "APPROVAL")
 
-    lateinit var requested_items_decoded: MyMap
+    lateinit var requested_items_decoded: RequestedItemsMap
 
     request.docRequests.first().decodedItemsRequest.nameSpaces.value.values.forEach {
-        Logger.d("ITEAM:" , it.toCBORHex())
-        Logger.d("DECODED ITEMS", decodeCborMap(it.toCBOR()).toString())
         requested_items_decoded = decodeCborMap(it.toCBOR())
     }
     
@@ -111,7 +109,12 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
         val transfer_helper = QRTransferHelper.getInstance(context)
         readerAuthenticated = transfer_helper.verifyCredentialRequest(request)
     }
+    if (initator == "NFC"){
+        val transfer_helper = NFCTransferHelper.getInstance(context)
+        readerAuthenticated = transfer_helper.verifyCredentialRequest(request)
+    }
 
+    val openAlertDialog = remember { mutableStateOf(false) }
 
     var include_family_name by remember { mutableStateOf(if (requested_items_decoded.family_name!= null){true} else { false}) }
     var include_given_name by remember { mutableStateOf(if (requested_items_decoded.given_name!= null){true} else { false}) }
@@ -129,13 +132,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
     var include_age_over_24 by remember { mutableStateOf(if (requested_items_decoded.age_over_24!= null){true} else { false}) }
     var include_age_over_65 by remember { mutableStateOf(if (requested_items_decoded.age_over_65!= null){true} else { false}) }
 
-
-
-
-
-
-
-
     Scaffold(
         topBar = {},
         bottomBar = {
@@ -143,23 +139,22 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.primary,
             ) {
-                /*Text(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    text = "Bottom app bar",
-                )*/
                 Row {
                     Button(
                         modifier = Modifier.weight(1f),
                         onClick = {
                             Logger.d("MAIN HRV", "buttons")
-                            //val i: Intent = Intent(context, MainActivity::class.java)
-
-
-                            //i.putExtra("requested_items", requested_items.toTypedArray())
-                            //i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            //ContextCompat.startActivity(context, i, null)
+                            val i: Intent = Intent(context, MainActivity::class.java)
+                            if (initator == "QR"){
+                                QRTransferHelper.getInstance(context).deviceRetrievalHelper!!.sendTransportSpecificTermination()
+                                QRTransferHelper.getInstance(context).deviceRetrievalHelper!!.disconnect()
+                            }
+                            if (initator == "NFC"){
+                                NFCTransferHelper.getInstance(context).deviceRetrievalHelper!!.sendTransportSpecificTermination()
+                                NFCTransferHelper.getInstance(context).deviceRetrievalHelper!!.disconnect()
+                            }
+                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            ContextCompat.startActivity(context, i, null)
                         }
                     ) {
                         Text(text = "Decline")
@@ -169,23 +164,9 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                         modifier = Modifier.weight(1f),
                         onClick = {
                             Logger.d("MAIN HRV", "buttons1")
-                            /*val transferHelper = TransferHelper.getInstance(applicationContext)
-                            if (transferHelper.qrEng.value == ""){
-                                Logger.d("MAIN HRV", "button its null")
-                            }else{
-                                Logger.d("MAIN HRV", transferHelper.qrEng.value!!)
-                                val i: Intent = Intent(applicationContext, QRPresentationActivity::class.java)
-                                i.putExtra("qr_code_value", transferHelper.qrEng.value)
-                                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                ContextCompat.startActivity(applicationContext, i, null)
-                            }*/
-                            //val i: Intent = Intent(context, QRScanActivity::class.java)
-
-
 
                             val mdoc_request_builder = MDocRequestBuilder("org.iso.18013.5.1.mDL")
                             val requested_items : MutableList<String> = mutableListOf()
-
 
                             if (include_family_name) requested_items.add("family_name")
                             if (include_given_name) requested_items.add("given_name")
@@ -237,33 +218,29 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
 
                                     Logger.d("MAIN AUTH", "onAuthenticationSucceeded")
 
-                                    val presentation = QRTransferHelper.getInstance(context).createPresentation(user_mdoc_request)
+                                    var presentation: MDoc?
 
-
-
-                                    QRTransferHelper.getInstance(context).deviceRetrievalHelper!!.sendDeviceResponse(presentation.toCBOR(), OptionalLong.empty())
+                                    if (initator == "QR"){
+                                        presentation = QRTransferHelper.getInstance(context).createPresentation(user_mdoc_request)
+                                        QRTransferHelper.getInstance(context).deviceRetrievalHelper!!.sendDeviceResponse(presentation.toCBOR(), OptionalLong.empty())
+                                    }
+                                    if (initator == "NFC"){
+                                        presentation = NFCTransferHelper.getInstance(context).createPresentation(user_mdoc_request)
+                                        NFCTransferHelper.getInstance(context).deviceRetrievalHelper!!.sendDeviceResponse(presentation.toCBOR(), OptionalLong.empty())
+                                    }
 
                                     super.onAuthenticationSucceeded(result)
+
+                                    openAlertDialog.value = true
                                 }
 
                                 override fun onAuthenticationFailed() {
-
-                                    Logger.d("MAIN AUTH", "onAuthenticationFailed")
-                                    Logger.d("MAIN AUTH", "NISMO USPIJELI POSLATI")
                                     super.onAuthenticationFailed()
                                 }
 
                             }
 
                             biometricPrompt.authenticate(CancellationSignal(), context.mainExecutor, biocall)
-
-
-
-
-                            /*i.putExtra("requested_items", requested_items)
-
-                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            ContextCompat.startActivity(context, i, null)*/
                         }
                     ) {
                         Text(text = "Send response")
@@ -273,67 +250,92 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
 
             }
         },
-        /*floatingActionButton = {
-            FloatingActionButton(onClick = {
-                Logger.d("MAIN HRV", "buttons")
-                }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
-            }
-        }*/
-
-
     ){
             innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                //.verticalScroll(
-                //    rememberScrollState()
-                //)
                 .fillMaxSize()
                 .fillMaxHeight()
-                //.wrapContentHeight(align = Alignment.CenterVertically)
-                .background(Color.Red)
             ,
-            //verticalArrangement = Arrangement.spacedBy(1.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (openAlertDialog.value){
+                AlertDialog(
+                    title = {
+                        Text(text = "Successfully sent")
+                    },
+                    onDismissRequest = {
+                        val i: Intent = Intent(context, MainActivity::class.java)
+                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        ContextCompat.startActivity(context, i, null)
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                val i: Intent = Intent(context, MainActivity::class.java)
+                                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                ContextCompat.startActivity(context, i, null)
+                            }
+                        ) {
+                            Text(text = "Ok")
+                        }
+                    },
+                )
+            }
             Card (
                 modifier = Modifier
-                    //.size(width = 240.dp, height = 100.dp)
                     .fillMaxWidth()
                     .padding(10.dp)
                     .verticalScroll(rememberScrollState())
-                //.align(Alignment.CenterHorizontally)
                 ,
             ){
-
-                Text(
-                    text = "REQUESTED ITEMS:")
-
                 Row {
-
                     Text(
-                        text = "Reader verified: ")
+                        text = "Reader verified: ",
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .weight(2f)
+                    )
                     if (readerAuthenticated){
                         Icon(
                             imageVector = Icons.Filled.CheckCircle,
                             contentDescription = null,
-                            modifier = Modifier.size(SwitchDefaults.IconSize),
-                            tint = Color.Green
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .size(25.dp)
+                                .weight(1f)
+                            ,
+                            tint = Color.Green,
                         )
                     }else{
                         Icon(
                             imageVector = Icons.Filled.Warning,
                             contentDescription = null,
-                            modifier = Modifier.size(SwitchDefaults.IconSize),
+                            modifier = Modifier
+                                .size(128.dp)
+                                .align(Alignment.CenterVertically)
+                                .weight(1f)
+                            ,
                             tint = Color.Red
                         )
                     }
+                }
 
-
+                Row {
+                    Text(
+                        text = "REQUESTED ITEMS:",
+                        modifier = Modifier
+                            .padding(5.dp)
+                            .absolutePadding(left = 10.dp)
+                            .width(200.dp)
+                            .weight(1f)
+                        ,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Left
+                    )
                 }
 
                 if (requested_items_decoded.family_name != null){
@@ -342,7 +344,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Family name:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -363,7 +364,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Given name:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -378,14 +378,12 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                         )
                     }
                 }
-
                 if (requested_items_decoded.portrait != null){
                     Row {
                         Text(
                             text = "Portrait:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -410,8 +408,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                                 null
                             },
                             colors = SwitchDefaults.colors(
-                                //checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                //checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                                 checkedThumbColor = MaterialTheme.colorScheme.primary,
                                 checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                                 uncheckedThumbColor = MaterialTheme.colorScheme.secondary,
@@ -428,7 +424,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Driving privileges:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -453,8 +448,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                                 null
                             },
                             colors = SwitchDefaults.colors(
-                                //checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                //checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                                 checkedThumbColor = MaterialTheme.colorScheme.primary,
                                 checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                                 uncheckedThumbColor = MaterialTheme.colorScheme.secondary,
@@ -473,7 +466,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Expiry date:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -498,8 +490,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                                 null
                             },
                             colors = SwitchDefaults.colors(
-                                //checkedThumbColor = MaterialTheme.colorScheme.primary,
-                                //checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                                 checkedThumbColor = MaterialTheme.colorScheme.primary,
                                 checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
                                 uncheckedThumbColor = MaterialTheme.colorScheme.secondary,
@@ -516,7 +506,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Age over 18:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -537,7 +526,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Document number:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -558,7 +546,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Issue date:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -579,7 +566,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Birth date:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -600,7 +586,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Issuing country:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -621,7 +606,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Issuing authority:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -642,7 +626,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Age over 21:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -663,7 +646,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Age over 24:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -684,7 +666,6 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                             text = "Age over 65:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
@@ -699,28 +680,18 @@ private fun RequestRadios(/*innerPadding: PaddingValues*/ context: Context, mdoc
                         )
                     }
                 }
-
-
             }
-
         }
     }
 }
 
 
-fun decodeCborMap(data: ByteArray): MyMap {
+fun decodeCborMap(data: ByteArray): RequestedItemsMap {
     val mapper = ObjectMapper(CBORFactory())
-    return mapper.readValue(data, MyMap::class.java)
+    return mapper.readValue(data, RequestedItemsMap::class.java)
 }
 
-data class MyMap(
-    //val iteams_map: Map<String, Boolean>,
-    //val family_name: Boolean,
-    //val given_name: Boolean,
-    //val issuing_authority: Boolean,
-    //val issuing_country: Boolean,
-
-
+data class RequestedItemsMap(
     val age_over_18: Boolean?,
     val family_name: Boolean?,
     val given_name: Boolean?,
@@ -737,6 +708,5 @@ data class MyMap(
     val age_over_24: Boolean?,
     val age_over_65: Boolean?
 ){
-    // Ensure a primary constructor is available
     constructor() : this(null,null,null,null,null,null,null,null,null,null,null,null,null,null)
 }

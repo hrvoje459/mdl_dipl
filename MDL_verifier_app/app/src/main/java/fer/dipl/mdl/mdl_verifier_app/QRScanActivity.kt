@@ -1,5 +1,6 @@
 package fer.dipl.mdl.mdl_verifier_app
 
+import android.app.Fragment
 import android.content.Intent
 import android.content.res.Resources
 import android.nfc.NfcAdapter
@@ -9,17 +10,33 @@ import android.os.SystemClock.sleep
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import com.android.identity.android.mdoc.deviceretrieval.VerificationHelper
 import com.android.identity.android.mdoc.transport.DataTransportOptions
 import com.android.identity.mdoc.connectionmethod.ConnectionMethod
@@ -35,8 +52,9 @@ import java.util.UUID
 
 class QRScanActivity : ComponentActivity() {
 
-    //private lateinit var verifierTransferHelper: VerifierTransferHelper
     private lateinit var transferHelper: VerifierTransferHelper
+
+    private lateinit var codeScanner: CodeScanner
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,154 +63,130 @@ class QRScanActivity : ComponentActivity() {
 
         val extras = intent.extras
 
-        val test1 = extras!!.getStringArrayList("requested_items")
+        val requested_items = extras!!.getStringArrayList("requested_items")
 
-        test1!!.forEach {
-            Logger.d("Requested", it)
+
+        transferHelper.setRequestedItems(requested_items!!.toTypedArray())
+
+
+        val qrCodeReturn = { qrtext:String ->
+            Logger.d("MAIN HRV", "qr_text" + qrtext)
+            VerifierTransferHelper.getInstance(applicationContext, this).setRequestedItems(extras!!.getStringArrayList("requested_items")!!.toTypedArray())
+            VerifierTransferHelper.getInstance(applicationContext, this).verificationHelper!!.setDeviceEngagementFromQrCode(qrtext)
         }
 
-
-
-        //Logger.d("ITEMS", extras!!.get("requested_items"))
-
-        transferHelper.setRequestedItems(extras!!.getStringArrayList("requested_items")!!.toTypedArray())
-
-        /*val extras = intent.extras
-
-        var verificationHelper: VerificationHelper? = null
-
-        val listener = object: VerificationHelper.Listener{
-            override fun onReaderEngagementReady(p0: ByteArray) {
-                Logger.d("MAIN CONNECTION", "onReaderEngagementReady")
-                //ODO("Not yet implemented")
-            }
-
-            override fun onDeviceEngagementReceived(p0: MutableList<ConnectionMethod>) {
-                Logger.d("MAIN CONNECTION", "onDeviceEngagementReceived")
-                Logger.d("MAIN CONNECTION", p0.first().toString())
-
-                /*val bleUuid = UUID.randomUUID()
-                val connectionMethod =
-                    ConnectionMethodBle(
-                        false,
-                        true,
-                        null,
-                        bleUuid)*/
-                verificationHelper!!.connect(p0.first())
-                //ODO("Not yet implemented")
-            }
-
-            override fun onMoveIntoNfcField() {
-                Logger.d("MAIN CONNECTION", "onMoveIntoNfcField")
-                //ODO("Not yet implemented")
-            }
-
-            override fun onDeviceConnected() {
-                Logger.d("MAIN CONNECTION", "onDeviceConnected")
-                //sleep(5000)
-                verificationHelper!!.sendRequest("teellooou".toByteArray())
-                //ODO("Not yet implemented")
-            }
-
-            override fun onDeviceDisconnected(p0: Boolean) {
-                Logger.d("MAIN CONNECTION", "onDeviceDisconnected")
-                //ODO("Not yet implemented")
-            }
-
-            override fun onResponseReceived(p0: ByteArray) {
-                Logger.d("MAIN CONNECTION", "onResponseReceived")
-                Logger.d("MAIN CONNECTION", String(p0))
-                //ODO("Not yet implemented")
-            }
-
-            override fun onError(p0: Throwable) {
-                Logger.d("MAIN CONNECTION", "onError")
-                Logger.d("MAIN CONNECTION", p0.message.toString())
-
-                //ODO("Not yet implemented")
-            }
-
-        }
-
-        val verificationHelperBuilder = VerificationHelper.Builder(applicationContext, listener, applicationContext.mainExecutor)
-
-        val options = DataTransportOptions.Builder()
-            .setBleUseL2CAP(false)
-            .build()
-
-        verificationHelperBuilder.setDataTransportOptions(options)
-
-
-        verificationHelper = verificationHelperBuilder.build()
-
-        //verifierTransferHelper = VerifierTransferHelper.getInstance(applicationContext, this)
-
-        //verificationHelper.setDeviceEngagementFromQrCode(extras!!.getString("qr_code_value").toString())
-
-        val nfcAdapter = NfcAdapter.getDefaultAdapter(applicationContext)
-        nfcAdapter.enableReaderMode(
-            this,
-            { tag ->
-                //if (state.value == State.IDLE) {
-                    verificationHelper.nfcProcessOnTagDiscovered(tag)
-                    //verifierTransferHelper.verificationHelper!!.nfcProcessOnTagDiscovered(tag)
-                //}
-                //state.postValue(State.ENGAGING)
-            },
-            NfcAdapter.FLAG_READER_NFC_A + NfcAdapter.FLAG_READER_NFC_B
-                    + NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK + NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS,
-            null)
-
-
-        //val bleUuid = UUID.randomUUID()
-
-        /*val connectionMethod =
-            ConnectionMethodBle(
-                false,
-                true,
-                null,
-                bleUuid)*/
-
-        //verificationHelper.connect(connectionMethod)
-
-
-        setContent{
-            MDL_verifier_appTheme{
-                if (extras!= null){
-                    Greeting(extras.getString("qr_code_value").toString())
+        val codeScannerView = CodeScannerView(applicationContext).apply {
+            codeScanner = CodeScanner(applicationContext, this).apply {
+                isAutoFocusEnabled = true
+                isAutoFocusButtonVisible = false
+                scanMode = ScanMode.SINGLE
+                decodeCallback = DecodeCallback { result ->
+                    qrCodeReturn.invoke(result.text)
+                    releaseResources()
                 }
+                errorCallback = ErrorCallback {
+                    releaseResources()
+                }
+                camera = CodeScanner.CAMERA_BACK
+                isFlashEnabled = false
             }
-        }*/
+            codeScanner.startPreview()
+        }
+
 
         setContent {
             MDL_verifier_appTheme {
-                // A surface container using the 'background' color from the theme
-                /*Surface(
+                var stateDisplay = remember { mutableStateOf("Idle") }
+
+                transferHelper.state.observe(this as LifecycleOwner){ state ->
+                    stateDisplay.value = state
+                    if (state == "Error" || state == "Device Disconnected"){
+                        Logger.d("QR SCAN ", "ERROR")
+
+                        val i: Intent = Intent(applicationContext, MainActivity::class.java)
+                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        ContextCompat.startActivity(applicationContext, i, null)
+                    }
+                }
+
+                Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Greeting("Android")
-                }*/
-                Column {
-                    QrScanner(
-                        onClose = { Logger.d("MAIN HRV", "close" ) },
-                        qrCodeReturn = { qrtext ->
-                            Logger.d("MAIN HRV", "qr_text" + qrtext)
-                            //toast(qrtext)
-                            //verifierTransferHelper.verificationHelper!!.setDeviceEngagementFromQrCode(qrtext)
-                            //verificationHelper.setDeviceEngagementFromQrCode(qrtext)
-                            transferHelper.verificationHelper!!.setDeviceEngagementFromQrCode(qrtext)
-                            /*val i: Intent = Intent(applicationContext, ConnectionActivity::class.java)
-                            i.putExtra("qr_code_value", qrtext)
-                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            ContextCompat.startActivity(applicationContext, i, null)*/
+                    Scaffold(
+                        topBar = {},
+                        bottomBar = {
+                            BottomAppBar(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.primary,
+                            ) {
+                                Row {
+                                    Button(
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            Logger.d("MAIN HRV", "buttons")
+                                            val i: Intent = Intent(applicationContext, NFCScanActivity::class.java)
+
+                                            val requested_items : ArrayList<String> = arrayListOf()
+                                            transferHelper.getRequestedItems().forEach { requested_items.add(it) }
+
+                                            VerifierTransferHelper.kill()
+                                            codeScanner.releaseResources()
+
+                                            i.putExtra("requested_items", requested_items)
+                                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            ContextCompat.startActivity(applicationContext, i, null)
+
+                                        }
+                                    ) {
+                                        Text(text = "NFC ENGAGEMENT")
+                                        Icon(Icons.Default.Add, contentDescription = "Add")
+                                    }
+                                    Button(
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            Logger.d("QR SCAN", "Do nothing")
+
+                                        }
+                                    ) {
+                                        Text(text = "QR CODE")
+                                        Icon(Icons.Default.Add, contentDescription = "Add")
+                                    }
+                                }
+
+                            }
                         },
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.background)
-                            //.fillMaxSize()
-                            .height(Resources.getSystem().displayMetrics.heightPixels.dp - 1500.dp)
-                    )
-                    Text(text = "SCAN QR OR TAP THE BACK FOR NFC ENGAGEMENT")
+                    ){
+                            innerPadding ->
+
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box{
+                                QrScanner(
+                                    codeScannerView,
+                                    modifier = Modifier
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .height(Resources.getSystem().displayMetrics.heightPixels.dp - 1700.dp)
+                                )
+                            }
+
+                            Text(text = "QR SCANNING IN PROGRESS")
+                            Box(modifier = Modifier.padding(innerPadding)){
+                                CircularProgressIndicator(
+                                    modifier = Modifier.width(64.dp),
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                )
+                            }
+                            Text(text = stateDisplay.value)
+                        }
+
+                    }
                 }
 
             }
@@ -201,15 +195,17 @@ class QRScanActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+
+        Logger.d("STOP", "STOP QR")
         VerifierTransferHelper.kill()
+        Logger.d("STOP", "STOP QR")
     }
 }
 
 
 @Composable
 private fun QrScanner(
-    qrCodeReturn: (String) -> Unit,
-    onClose: () -> Unit,
+    codeScannerView: CodeScannerView,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -219,26 +215,9 @@ private fun QrScanner(
             AndroidView(
                 modifier = Modifier,
                 factory = {
-                    CodeScannerView(it).apply {
-                        val codeScanner = CodeScanner(it, this).apply {
-                            isAutoFocusEnabled = true
-                            isAutoFocusButtonVisible = false
-                            scanMode = ScanMode.SINGLE
-                            decodeCallback = DecodeCallback { result ->
-                                qrCodeReturn.invoke(result.text)
-                                releaseResources()
-                            }
-                            errorCallback = ErrorCallback {
-                                releaseResources()
-                            }
-                            camera = CodeScanner.CAMERA_BACK
-                            isFlashEnabled = false
-                        }
-                        codeScanner.startPreview()
-                    }
+                    codeScannerView
                 },
             )
         }
-        //CloseBtn(onClick = onClose)
     }
 }

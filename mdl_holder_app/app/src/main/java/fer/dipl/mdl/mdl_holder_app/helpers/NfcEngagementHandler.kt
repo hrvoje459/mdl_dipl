@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package fer.dipl.mdl.mdl_holder_app
+package fer.dipl.mdl.mdl_holder_app.helpers
 
 import android.nfc.cardemulation.HostApduService
-import android.os.Binder
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -26,13 +25,12 @@ import com.android.identity.android.mdoc.transport.DataTransport
 import com.android.identity.android.mdoc.transport.DataTransportOptions
 import com.android.identity.internal.Util
 import com.android.identity.mdoc.connectionmethod.ConnectionMethod
-import com.android.identity.mdoc.connectionmethod.ConnectionMethodBle
 import com.android.identity.mdoc.connectionmethod.ConnectionMethodNfc
 import com.android.identity.securearea.SecureArea
 import com.android.identity.util.Logger
 import java.util.UUID
 
-
+// Copied and modified from https://github.com/openwallet-foundation-labs/identity-credential/blob/main/samples/preconsent-mdl/src/main/java/com/android/identity/preconsent_mdl/NfcEngagementHandler.kt
 class NfcEngagementHandler : HostApduService() {
     companion object {
         private val TAG = "NfcEngagementHandler"
@@ -44,35 +42,24 @@ class NfcEngagementHandler : HostApduService() {
     private lateinit var nfcTransferHelper : NFCTransferHelper
 
     val eDeviceKeyCurve = SecureArea.EC_CURVE_P256
-    /* val eDeviceKeyPair by lazy {
-        Util.createEphemeralKeyPair(eDeviceKeyCurve)
-    }*/
     val eDeviceKeyPair = Util.createEphemeralKeyPair(eDeviceKeyCurve)
 
     private val nfcEngagementListener = object : NfcEngagementHelper.Listener {
 
         override fun onTwoWayEngagementDetected() {
             Logger.d(TAG, "onTwoWayEngagementDetected")
-        }
 
-        /*override fun onHandoverSelectMessageSent() {
-            Logger.d(TAG, "onHandoverSelectMessageSent")
-            // This is invoked _just_ before the NFC tag reader will do a READ_BINARY
-            // for the Handover Select message. Vibrate the watch to indicate to the
-            // user they can start removing the watch from the reader.
-            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            val vibrationPattern = longArrayOf(0, 500, 50, 300)
-            val indexInPatternToRepeat = -1
-            vibrator.vibrate(vibrationPattern, indexInPatternToRepeat)
-            nfcTransferHelper.setEngagementSent()
-        }*/
+            nfcTransferHelper = NFCTransferHelper.getInstance(applicationContext)
+            nfcTransferHelper.state.value = "Engagment detected"
+        }
 
         override fun onDeviceConnecting() {
             Logger.d(TAG, "onDeviceConnecting")
+            nfcTransferHelper.state.value = "Device Connecting"
         }
 
         override fun onDeviceConnected(transport: DataTransport) {
-            Logger.d(TAG, "onDeviceConnected")
+            Logger.d(TAG, "Device Connected")
 
             nfcTransferHelper.setConnected(
                 eDeviceKeyPair,
@@ -87,6 +74,8 @@ class NfcEngagementHandler : HostApduService() {
 
         override fun onError(error: Throwable) {
             Logger.d(TAG, "Engagement Listener: onError -> ${error.message}")
+
+            nfcTransferHelper.state.value = "Engagement Error"
             engagementHelper?.close()
             engagementHelper = null
         }
@@ -98,53 +87,17 @@ class NfcEngagementHandler : HostApduService() {
 
         nfcTransferHelper = NFCTransferHelper.getInstance(applicationContext)
 
-        /*val launchAppIntent = Intent(applicationContext, PresentationActivity::class.java)
-        launchAppIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_NO_HISTORY or
-                Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS)
-        applicationContext.startActivity(launchAppIntent)
-*/
-        //nfcTransferHelper.setEngaging()
-        /*val options = DataTransportOptions.Builder()
-            .setBleUseL2CAP(transferHelper.getL2CapEnabled())
-            .setExperimentalBleL2CAPPsmInEngagement(transferHelper.getExperimentalPsmEnabled())
-            .build()*/
+
         val options = DataTransportOptions.Builder()
             .setBleUseL2CAP(false)
-
-            //.setExperimentalBleL2CAPPsmInEngagement(transferHelper.getExperimentalPsmEnabled())
             .build()
         val connectionMethods = mutableListOf<ConnectionMethod>()
-        val bleUuid = UUID.randomUUID()
-        //if (transferHelper.getBleCentralClientDataTransferEnabled()) {
-            /*connectionMethods.add(ConnectionMethodBle(
-                false,
-                true,
-                null,
-                bleUuid))*/
-            connectionMethods.add(ConnectionMethodNfc(
-                4096, 32768
-            ))
-        //}
-        /*if (transferHelper.getBlePeripheralServerDataTransferEnabled()) {
-            connectionMethods.add(ConnectionMethodBle(
-                true,
-                false,
-                bleUuid,
-                null))
-        }*/
-        /*if (transferHelper.getWifiAwareDataTransferEnabled()) {
-            connectionMethods.add(ConnectionMethodWifiAware(null, OptionalLong.empty(), OptionalLong.empty(), null))
-        }
-        if (transferHelper.getNfcDataTransferEnabled()) {
-            connectionMethods.add(ConnectionMethodNfc(4096, 32768))
-        }
-        if (transferHelper.getTcpDataTransferEnabled()) {
-            connectionMethods.add(ConnectionMethodTcp("", 0))
-        }
-        if (transferHelper.getUdpDataTransferEnabled()) {
-            connectionMethods.add(ConnectionMethodUdp("", 0))
-        }*/
+        //val bleUuid = UUID.randomUUID()
+
+        connectionMethods.add(ConnectionMethodNfc(
+            4096, 32768
+        ))
+
         val builder = NfcEngagementHelper.Builder(
             applicationContext,
             eDeviceKeyPair.public,
@@ -152,11 +105,8 @@ class NfcEngagementHandler : HostApduService() {
             nfcEngagementListener,
             applicationContext.mainExecutor
         )
-        //if (transferHelper.getNfcNegotiatedHandoverEnabled()) {
-            builder.useNegotiatedHandover()
-        //} else {
-        //    builder.useStaticHandover(ConnectionMethod.combine(connectionMethods))
-        //}
+        builder.useNegotiatedHandover()
+
         engagementHelper = builder.build()
     }
 

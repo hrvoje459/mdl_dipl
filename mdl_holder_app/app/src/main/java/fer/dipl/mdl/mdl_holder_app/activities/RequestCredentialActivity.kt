@@ -1,4 +1,4 @@
-package fer.dipl.mdl.mdl_holder_app
+package fer.dipl.mdl.mdl_holder_app.activities
 
 import android.content.Context
 import android.content.Intent
@@ -20,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
@@ -45,13 +44,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.android.identity.util.Logger
+import fer.dipl.mdl.mdl_holder_app.MainActivity
+import fer.dipl.mdl.mdl_holder_app.helpers.DrivingCredentialRequest
 import fer.dipl.mdl.mdl_holder_app.ui.theme.MDL_holder_appTheme
+import id.walt.mdoc.doc.MDoc
 import kotlinx.coroutines.launch
-import java.io.BufferedReader
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileWriter
-import java.io.InputStreamReader
 
 
 class RequestCredentialActivity: ComponentActivity() {
@@ -60,9 +57,6 @@ class RequestCredentialActivity: ComponentActivity() {
     @Override
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-
-
 
         setContent {
             MDL_holder_appTheme {
@@ -82,11 +76,9 @@ fun RequestForm(applicationContext: Context){
     var username: String  by remember { mutableStateOf("") }
     var password: String  by remember { mutableStateOf("") }
 
-    //val countries = arrayOf("Croatia \uD83C\uDDED\uD83C\uDDF7", "Slovenia \uD83C\uDDF8\uD83C\uDDEE")
     val countries = arrayOf("Croatia", "Slovenia")
     var expanded by remember { mutableStateOf(false) }
     var selectedCountry by remember { mutableStateOf(countries[0]) }
-
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -94,84 +86,22 @@ fun RequestForm(applicationContext: Context){
     ) {
         Scaffold(
             topBar = {},
-            /*bottomBar = {
-                BottomAppBar(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.primary,
-                ) {
-                    /*Text(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        text = "Bottom app bar",
-                    )*/
-                    Row {
-                        Button(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                Logger.d("MAIN HRV", "buttons")
-                                val i: Intent = Intent(applicationContext, NFCPresentationActivity::class.java)
-                                //i.putExtra("qr_code_value", transferHelper.qrEng.value)
-                                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                ContextCompat.startActivity(applicationContext, i, null)
-                            }
-                        ) {
-                            Text(text = "NFC ENGAGEMENT")
-                            Icon(Icons.Default.Add, contentDescription = "Add")
-                        }
-                        Button(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                Logger.d("MAIN HRV", "buttons2")
-                                val transferHelper = QRTransferHelper.getInstance(applicationContext)
-
-                            }
-                        ) {
-                            Text(text = "QR CODE")
-                            Icon(Icons.Default.Add, contentDescription = "Add")
-                        }
-                    }
-
-                }
-            },*/
-            /*floatingActionButton = {
-                FloatingActionButton(onClick = {
-                    Logger.d("MAIN HRV", "buttons")
-                    }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add")
-                }
-            }*/
-
-
         ){
                 innerPadding ->
-
             Column(
                 modifier = Modifier
                     .padding(innerPadding)
-                    //.verticalScroll(
-                    //    rememberScrollState()
-                    //)
                     .fillMaxSize()
                     .fillMaxHeight()
-                    //.wrapContentHeight(align = Alignment.CenterVertically)
-                    .background(Color.Red)
                 ,
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
-                //verticalArrangement = Arrangement.spacedBy(1.dp),
-                //verticalArrangement = Arrangement.SpaceEvenly
-
-
             ) {
                 Card(
                     modifier = Modifier
-                        //.size(width = 240.dp, height = 100.dp)
                         .fillMaxWidth()
                         .padding(10.dp)
                         .verticalScroll(rememberScrollState()),
-                    //.align(Alignment.CenterHorizontally)
                 ){
                     Box(
                         modifier = Modifier
@@ -191,7 +121,6 @@ fun RequestForm(applicationContext: Context){
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                                 modifier = Modifier.menuAnchor()
                             )
-
                             ExposedDropdownMenu(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false }
@@ -252,27 +181,25 @@ fun RequestForm(applicationContext: Context){
                         )
                         Button(
                             onClick = {
-                                Toast.makeText(applicationContext,username + " " + password, Toast.LENGTH_SHORT).show()
-
                                 coroutineScope.launch {
-                                    val credential = DrivingCredentialRequest(applicationContext).getCredential(applicationContext)
-                                    if(credential == null){
-                                        Logger.d("CRED", "CREDENTIAL JE NULL")
-                                    }else{
-                                        Logger.d("CRED", credential!!.toCBORHex())
+                                    var mdoc_credential :MDoc? = null
+                                    try {
+                                        mdoc_credential = DrivingCredentialRequest(applicationContext).requestCredential(username, password, selectedCountry, applicationContext)
+                                    }catch (e: Exception){
+                                        Logger.d("CREDENTIAL ISSUANCE ERROR", e.stackTrace.toString())
+                                        Toast.makeText(
+                                            applicationContext,
+                                            "CREDENTIAL ISSUANCE FAILED ",
+                                            Toast.LENGTH_LONG
+                                        ).show()
                                     }
-                                    val testcredential = DrivingCredentialRequest(applicationContext).requestCredential(username, password, selectedCountry, applicationContext)
-                                    println(testcredential)
 
-                                    if (testcredential != null){
+                                    if (mdoc_credential != null){
                                         val i: Intent = Intent(applicationContext, MainActivity::class.java)
-                                        //i.putExtra("qr_code_value", transferHelper.qrEng.value)
                                         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                         ContextCompat.startActivity(applicationContext, i, null)
                                     }
                                 }
-
-
                             },
                             modifier = Modifier
                                 .weight(1f)
@@ -281,20 +208,9 @@ fun RequestForm(applicationContext: Context){
                             Text(text = "Request credential")
                             Icon(Icons.Default.Add, contentDescription = "Add")
                         }
-
                     }
-
                 }
-
-                //GreetingPreview2("Mile " + value, bmp)
             }
         }
-        //ImageView(applicationContext).setImageBitmap(bmp)
-        /*Button(
-            onClick = {
-            Logger.d("MAIN HRV", "buttons")
-        }) {
-            GreetingPreview2("Mile " + value, bmp)
-        }*/
     }
 }

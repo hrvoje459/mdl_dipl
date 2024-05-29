@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "fer.dipl.mdl.mdl_holder_app"
+    namespace = "fer.dipl.mdl.mdl_invalid_app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "fer.dipl.mdl.mdl_holder_app"
+        applicationId = "fer.dipl.mdl.mdl_invalid_app"
         minSdk = 33
         targetSdk = 34
         versionCode = 1
@@ -65,8 +65,16 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
-    implementation("com.android.identity:identity-credential-android:20231002")
-    implementation("com.android.identity:identity-credential:20231002")
+    implementation("com.android.identity:identity-credential-android:20231002"){
+        exclude("org.bouncycastle","bcpkix-jdk15on")
+        exclude("org.bouncycastle", "bcprov-jdk15on")
+
+    }
+    implementation("com.android.identity:identity-credential:20231002"){
+        exclude("org.bouncycastle", "bcprov-jdk15on")
+        exclude("org.bouncycastle","bcpkix-jdk15on")
+
+    }
     implementation("com.github.yuriy-budiyev:code-scanner:2.3.0")
     // https://mvnrepository.com/artifact/com.google.zxing/core
     implementation("com.google.zxing:core:3.3.3")
@@ -75,13 +83,37 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
 
 
+
     // WALT ID LIBRARIES
     implementation("id.walt.did:waltid-did:1.0.2403291506-SNAPSHOT"){
         exclude("org.bouncycastle", "bcprov-jdk15on")
         exclude("org.bouncycastle","bcpkix-lts8on")
         exclude("org.bouncycastle","bcprov-lts8on")
+        exclude("org.bouncycastle","bcutil-lts8on")
     }
-    implementation("id.walt:waltid-mdoc-credentials-jvm:1.0.2403291506-SNAPSHOT")
+
+    // BOUNCY CASTLE CRYPTO
+    implementation("org.bouncycastle:bcprov-jdk15on:1.70") {
+        //exclude("org.bouncycastle", "bcprov-jdk15on")
+        //exclude("org.bouncycastle","bcpkix-lts8on")
+        //exclude("org.bouncycastle","bcutil-lts8on")
+
+    }
+    implementation("org.bouncycastle:bcpkix-jdk15on:1.70"){
+        //exclude("org.bouncycastle", "bcprov-jdk15on")
+        //exclude("org.bouncycastle","bcprov-lts8on")
+        //exclude("org.bouncycastle","bcutil-lts8on")
+    }
+
+    // Date
+    implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.5.0")
+
+    // BOUNCY CASTLE CRYPTO
+    implementation("id.walt:waltid-mdoc-credentials-jvm:1.0.2403291506-SNAPSHOT"){
+        exclude("org.bouncycastle", "bcprov-jdk15on")
+        exclude("org.bouncycastle","bcpkix-lts8on")
+        exclude("org.bouncycastle","bcprov-lts8on")
+    }
 
     implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.16.0")
     implementation("com.nimbusds:nimbus-jose-jwt:9.37.3")

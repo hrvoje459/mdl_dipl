@@ -11,6 +11,7 @@ import android.content.res.Resources
 import android.nfc.NfcAdapter
 import android.util.Log
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.MutableLiveData
 import cbor.Cbor
 import com.android.identity.android.mdoc.deviceretrieval.VerificationHelper
 //import com.android.identity.android.mdoc.transport.ConnectionMethodUdp
@@ -46,17 +47,7 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.UUID
 
-data class MySessionTranscript(
-    val sessionTranscript: List<Any>
-){
-    // Ensure a primary constructor is available
-    constructor() : this(listOf())
-}
 
-fun decodeCbor(data: ByteArray): MySessionTranscript {
-    val mapper = ObjectMapper(CBORFactory())
-    return mapper.readValue(data, MySessionTranscript::class.java)
-}
 class VerifierTransferHelper private constructor(
     private var context: Context,
     private var activity: Activity,
@@ -78,27 +69,38 @@ class VerifierTransferHelper private constructor(
 
         fun kill(){
             this.instance = null
+
         }
     }
 
     var verificationHelper: VerificationHelper? = null
-    private var connectionMethodUsed: ConnectionMethod? = null
     private lateinit var mdocRequest: MDocRequest
     private lateinit var requested_items: Array<String>
+
+
+
+    var state = MutableLiveData<String>()
 
 
     fun setRequestedItems(requested_items: Array<String>){
         this.requested_items = requested_items
     }
 
+    fun getRequestedItems(): Array<String>{
+        return requested_items
+    }
+
     private val listener = object : VerificationHelper.Listener {
         override fun onReaderEngagementReady(readerEngagement: ByteArray) {
             Logger.d(TAG, "onReaderEngagementReady")
+            state.value = "Engagement Ready"
         }
 
         override fun onDeviceEngagementReceived(connectionMethods: MutableList<ConnectionMethod>) {
             Logger.d(TAG, "onDeviceEngagementReceived")
             verificationHelper!!.connect(connectionMethods.first())
+            state.value = "Engagement received"
+
         }
 
         override fun onMoveIntoNfcField() {
@@ -107,22 +109,8 @@ class VerifierTransferHelper private constructor(
 
         override fun onDeviceConnected() {
             Logger.d(TAG, "onDeviceConnected")
-            //verificationHelper!!.sendRequest("teellooou".toByteArray())
 
-
-
-            //val sessionTranscript = decodeCbor(verificationHelper!!.sessionTranscript)
-
-            val test: AnyDataElement = EncodedCBORElement(verificationHelper!!.sessionTranscript).decode() as ListElement
-
-
-            Logger.d("SESSION", test.toString())
-            Logger.d("SESSION", test.toCBORHex())
-            //val sessionTranscript = ListElement(listOf())
-
-
-            //println(sessionTranscript)
-            //Logger.d("SESSION", sessionTranscript.toString())
+            state.value = "Device Connected"
 
             createMdocRequest(requested_items)
 
@@ -137,74 +125,79 @@ class VerifierTransferHelper private constructor(
 
         override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
             Logger.d(TAG, "onDeviceDisconnected, $transportSpecificTermination")
+            state.value = "Device Disconnected"
         }
 
         override fun onResponseReceived(deviceResponseBytes: ByteArray) {
             Logger.d(TAG, "onResponseReceived")
             Logger.d(TAG, String(deviceResponseBytes))
+            state.value = "Response Received"
 
             val mdoc_presentation = MDoc.fromCBOR(deviceResponseBytes)
 
             val sessionTranscript = EncodedCBORElement(verificationHelper!!.sessionTranscript).decode() as ListElement
 
-            val device_auth = DeviceAuthentication(sessionTranscript, "org.iso.18013.5.1.mDL", mdocRequest.decodedItemsRequest.nameSpaces.toEncodedCBORElement())
+            val device_auth = DeviceAuthentication(sessionTranscript, "org.iso.18013.5.1.mDL", mdoc_presentation.deviceSigned!!.nameSpaces)
+
+
+            var pres_chain: List<X509Certificate> = mutableListOf()
+
+            Logger.d("CHAIN", mdoc_presentation.toCBORHex())
+            Logger.d("CHAIN", mdoc_presentation.issuerSigned.toString())
+            Logger.d("CHAIN", mdoc_presentation.issuerSigned.issuerAuth!!.toCBORHex())
+            Logger.d("CHAIN", mdoc_presentation.issuerSigned.issuerAuth!!.x5Chain.toString())
+
 
             val presentation_chain = mdoc_presentation.issuerSigned.issuerAuth!!.x5Chain!!
-            val pres_chain = CertificateFactory.getInstance("X509").generateCertificates(
-                ByteArrayInputStream(presentation_chain)
-            ).map { it as X509Certificate }
-            println("PRESENTATION CERT CHAIN: " + pres_chain)
+
+            Logger.d("CHAIN", mdoc_presentation.issuerSigned.issuerAuth!!.x5Chain.toString())
+
+            try {
+                Logger.d("CHAIN", mdoc_presentation.issuerSigned.issuerAuth!!.x5Chain.toString())
+                pres_chain =  CertificateFactory.getInstance("X509").generateCertificates(
+                    ByteArrayInputStream(presentation_chain)
+                ).map { it as X509Certificate }
+            }catch (e:Exception){
+                Logger.d("CHAIN EXCEPTION", e.message!!)
+            }
+
+            pres_chain.forEach{
+                Logger.d("CHAIN", it.toString())
+            }
+
 
             val recreated_device_key = OneKey(CBORObject.DecodeFromBytes(mdoc_presentation.MSO!!.deviceKeyInfo.deviceKey.toCBOR()))
 
 
-            val countries_secrets_folder = "issuer_secrets_hr"
-            var rootCaCertificate: X509Certificate? = null;
+            val trusted_roots: MutableList<X509Certificate> = mutableListOf()
 
-            // check for ROOT CA cert
-            if (/*rootCertFile.exists()*/true) {
-                if (/*rootCertFile.length() == 0L*/ false) {
-                    //println("The file '$rootCertFile' is empty.")
-                } else {
-                    //println("The file '$rootCertFile' is not empty.")
-                    //println(rootJWKFile.readText())
-                    //println("ROOT " +  Resources.getSystem().openRawResource(R.raw.root_ca_cert_hr).reader().readText())
-
-                    val rootCaCertFile = context.assets.open("secrets/$countries_secrets_folder/root_ca_cert.json")
-                    rootCaCertificate =X509CertUtils.parse(rootCaCertFile.reader().readText())
-                    println("ROOT " + rootCaCertificate.toString())
-                    //rootCaCertificate = X509CertUtils.parse(rootCertFile.readText())
-                    //println(rootCertFile.readText())
-
-                }
+            context.assets.list("trusted_roots")!!.forEach {
+                Logger.d("TRUSTED ROOTS FILES", it)
+                val temp_cert = context.assets.open("trusted_roots/" + it).reader().readText()
+                Logger.d("TRUSTED CERT", temp_cert)
+                trusted_roots.add(X509CertUtils.parse(temp_cert))
             }
 
+
             val cryptoProvider_reader = SimpleCOSECryptoProvider(listOf(
-                //COSECryptoProviderKeyInfo("ISSUER_KEY_ID", AlgorithmID.ECDSA_256, pres_chain.first().publicKey, x5Chain =  pres_chain, trustedRootCAs =  listOf(pres_chain.last())),
-                COSECryptoProviderKeyInfo("ISSUER_KEY_ID", AlgorithmID.ECDSA_256, pres_chain.first().publicKey, x5Chain =  pres_chain, trustedRootCAs =  listOf(rootCaCertificate!!)),
+                COSECryptoProviderKeyInfo("ISSUER_KEY_ID", AlgorithmID.ECDSA_256, pres_chain.first().publicKey, x5Chain =  pres_chain, trustedRootCAs =  trusted_roots),
                 COSECryptoProviderKeyInfo("DEVICE_KEY_ID", AlgorithmID.ECDSA_256, recreated_device_key.AsPublicKey(), x5Chain =  pres_chain, trustedRootCAs =  listOf(pres_chain.last()))
 
             ))
 
-            val mdocVerified = mdoc_presentation.verify(
+            /*val mdocVerified = mdoc_presentation.verify(
                 MDocVerificationParams(
                     VerificationType.DOC_TYPE and VerificationType.DEVICE_SIGNATURE and VerificationType.ISSUER_SIGNATURE and VerificationType.ITEMS_TAMPER_CHECK,
                     issuerKeyID = "ISSUER_KEY_ID",
                     deviceKeyID = "DEVICE_KEY_ID",
                     deviceAuthentication = device_auth,
-                    mDocRequest = mdocRequest
-                ), cryptoProvider_reader)
+                    //mDocRequest = mdocRequest
+                ), cryptoProvider_reader)*/
 
-            Logger.d("IS VALID:", mdocVerified.toString())
 
             val  issuer_signature_verified = mdoc_presentation.verifySignature(cryptoProvider_reader, "ISSUER_KEY_ID")
             val device_signature_verified = mdoc_presentation.verifyDeviceSignature(device_auth, cryptoProvider_reader, "DEVICE_KEY_ID")
             val issuer_certificate_verified = mdoc_presentation.verifyCertificate(cryptoProvider_reader, "ISSUER_KEY_ID")
-
-
-            Logger.d("presentation verified: ", issuer_signature_verified.toString())
-            Logger.d("presentation verified: ", device_signature_verified.toString())
-            Logger.d("presentation verified:", issuer_certificate_verified.toString())
 
             val i: Intent = Intent(context, MDLPresentationActivity::class.java)
             i.putExtra("mdoc_bytes", deviceResponseBytes)
@@ -218,96 +211,43 @@ class VerifierTransferHelper private constructor(
 
         override fun onError(error_: Throwable) {
             Logger.d(TAG, "onError $error_")
+            state.value = "Error"
+
         }
     }
 
-    fun createMdocRequest( requested_items: Array<String>){
+    fun createMdocRequest(requested_items: Array<String>){
 
-        val country_code = "hr"
+        //val country_code = "hr"
         val countries_secrets_folder = "issuer_secrets_hr"
 
         val READER_KEY_ID = "READER_KEY"
 
-        //val rootCert = "./$secrets_folder/root_ca_cert.json"
-        //val intermediateCert = "./$secrets_folder/intermediate_ca_cert.json"
-        //val readerCert = "./$secrets_folder/reader_cert.json"
-
-        //val readerJWK = "./$secrets_folder/reader_jwk.json"
         var readerECKey: ECKey? = null
-
-
-
-        //val rootCertFile = File(rootCert)
-        //val intermediateCertFile = File(intermediateCert)
-        //val readerCertFile = File(readerCert)
-
-        //val readerJWKFile = File(readerJWK)
 
         var rootCaCertificate: X509Certificate? = null;
         var intermediateCaCertificate: X509Certificate? = null;
         var readerCertificate: X509Certificate? = null;
 
-        // check for ROOT CA cert
-        if (/*rootCertFile.exists()*/true) {
-            if (/*rootCertFile.length() == 0L*/ false) {
-                //println("The file '$rootCertFile' is empty.")
-            } else {
-                //println("The file '$rootCertFile' is not empty.")
-                //println(rootJWKFile.readText())
-                //println("ROOT " +  Resources.getSystem().openRawResource(R.raw.root_ca_cert_hr).reader().readText())
+        val rootCaCertFile = context.assets.open("secrets/$countries_secrets_folder/root_ca_cert.json")
+        rootCaCertificate =X509CertUtils.parse(rootCaCertFile.reader().readText())
+        println("ROOT " + rootCaCertificate.toString())
 
-                val rootCaCertFile = context.assets.open("secrets/$countries_secrets_folder/root_ca_cert.json")
-                rootCaCertificate =X509CertUtils.parse(rootCaCertFile.reader().readText())
-                println("ROOT " + rootCaCertificate.toString())
-                //rootCaCertificate = X509CertUtils.parse(rootCertFile.readText())
-                //println(rootCertFile.readText())
 
-            }
-        }
+        val intermediateCaCertFile = context.assets.open("secrets/$countries_secrets_folder/intermediate_ca_cert.json")
+        intermediateCaCertificate =X509CertUtils.parse(intermediateCaCertFile.reader().readText())
 
-        // check for INTERMEDIATE CA cert
-        if (/*intermediateCertFile.exists()*/true) {
-            if (/*intermediateCertFile.length() == 0L*/ false) {
-                //println("The file '$intermediateCertFile' is empty.")
-            } else {
-                //println("The file '$intermediateCertFile' is not empty.")
-                //println(intermediateJWKFile.readText())
-                //intermediateCaCertificate = X509CertUtils.parse(intermediateCertFile.readText())
-                val intermediateCaCertFile = context.assets.open("secrets/$countries_secrets_folder/intermediate_ca_cert.json")
-                intermediateCaCertificate =X509CertUtils.parse(intermediateCaCertFile.reader().readText())
 
-                //intermediateCaCertificate = X509CertUtils.parse(Resources.getSystem().openRawResource(R.raw.intermediate_ca_cert_hr).reader().readText())
-                //println(intermediateCertFile.readText())
 
-            }
-        }
+        val readerCertFile = context.assets.open("secrets/$countries_secrets_folder/reader_cert.json")
+        readerCertificate =X509CertUtils.parse(readerCertFile.reader().readText())
 
-        // check for READER key and cert
-        if (/*readerJWKFile.exists() && readerCertFile.exists()*/ true) {
-            if (/*readerJWKFile.length() == 0L || intermediateCertFile.length() == 0L*/ false) {
-                //println("The file '$readerJWKFile' or '$readerCertFile' is empty.")
-            } else {
-                //println("The files '$readerJWKFile' or '$readerCertFile' are not empty.")
-                //readerECKey = ECKey.parse(readerJWKFile.readText())
-                val readerCertFile = context.assets.open("secrets/$countries_secrets_folder/reader_cert.json")
-                readerCertificate =X509CertUtils.parse(readerCertFile.reader().readText())
+        val readerJwkFile = context.assets.open("secrets/$countries_secrets_folder/reader_jwk.json")
 
-                val readerJwkFile = context.assets.open("secrets/$countries_secrets_folder/reader_jwk.json")
-                //rootCaCertificate =X509CertUtils.parse(readerJwkFile.reader().readText())
+        val readerkeyjson = readerJwkFile.reader().readText()
+        println("HRVOJE::" + readerkeyjson)
 
-                val readerkeyjson = readerJwkFile.reader().readText()
-                println("HRVOJE::" + readerkeyjson)
-
-                readerECKey = ECKey.parse(readerkeyjson)
-                //readerECKey = ECKey.parse(Resources.getSystem().openRawResource(R.raw.reader_jwk_hr).reader().readText())
-                //println(intermediateJWKFile.readText())
-                //readerCertificate = X509CertUtils.parse(readerCertFile.readText())
-                //readerCertificate = X509CertUtils.parse(Resources.getSystem().openRawResource(R.raw.reader_cert_hr).reader().readText())
-
-                //println(intermediateCertFile.readText())
-
-            }
-        }
+        readerECKey = ECKey.parse(readerkeyjson)
 
 
         val certs = listOf(readerCertificate!!, intermediateCaCertificate!!, rootCaCertificate!!)
@@ -318,27 +258,12 @@ class VerifierTransferHelper private constructor(
             )
         )
 
-
-        //val deviceEngagementBytes =  verificationHelper. "engagement_bytes".toByteArray()
-        val EReaderKeyBytes = readerECKey.toKeyPair().public.encoded
-        //val sessionTranscript = Cbor.decodeFromByteArray<ListElement>(verificationHelper!!.sessionTranscript)
-        //val sessionTranscript = ListElement()
-
         val sessionTranscript = EncodedCBORElement(verificationHelper!!.sessionTranscript).decode() as ListElement
 
-        //val sessionTranscript = ListElement(listOf(deviceEngagementBytes.toDE(), EReaderKeyBytes.toDE()))
-        //val sessionTranscript = Cbor.decodeFromByteArray<ListElement>(verificationHelper!!.sessionTranscript)
-
-
-
-        //val requested_elements = dataelements
-        val requested_elements = arrayOf("family_name", "given_name", "issuing_authority", "portrait")
 
         val mdoc_request_builder = MDocRequestBuilder("org.iso.18013.5.1.mDL")
 
-
         requested_items.forEach {
-
             mdoc_request_builder.addDataElementRequest("org.iso.18013.5.1", it, false)
             Logger.d("REQUESTED ITEM: ", it)
         }
@@ -383,6 +308,12 @@ class VerifierTransferHelper private constructor(
         initializeVerificationHelper()
 
         val nfcAdapter = NfcAdapter.getDefaultAdapter(context)
+
+        nfcAdapter.disableReaderMode(activity)
+
+        Logger.d("INIT ACTIVITY", activity.localClassName)
+
+
         nfcAdapter.enableReaderMode(
             activity,
             { tag ->
@@ -393,8 +324,7 @@ class VerifierTransferHelper private constructor(
             null)
 
 
-
-
+        Logger.d("NFC ENABLED", nfcAdapter.isEnabled.toString())
 
 
     }

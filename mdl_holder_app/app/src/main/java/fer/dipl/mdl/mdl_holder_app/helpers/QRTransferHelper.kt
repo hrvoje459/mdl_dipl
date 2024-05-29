@@ -1,11 +1,9 @@
-package fer.dipl.mdl.mdl_holder_app
+package fer.dipl.mdl.mdl_holder_app.helpers
 
 import COSE.AlgorithmID
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import androidx.compose.ui.layout.LookaheadScope
-import androidx.core.content.ContextCompat
 //import android.hardware.biometrics.BiometricPrompt
 import androidx.core.content.ContextCompat.startActivity
 import androidx.lifecycle.LiveData
@@ -22,9 +20,11 @@ import com.android.identity.securearea.SecureArea
 import com.android.identity.util.Logger
 import com.nimbusds.jose.jwk.ECKey
 import com.nimbusds.jose.util.X509CertUtils
+import fer.dipl.mdl.mdl_holder_app.activities.QRPresentationActivity
+import fer.dipl.mdl.mdl_holder_app.activities.RequestApprovalActivity
+import fer.dipl.mdl.mdl_holder_app.activities.decodeCborMap
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
-import id.walt.mdoc.cose.COSESign1
 import id.walt.mdoc.dataelement.EncodedCBORElement
 import id.walt.mdoc.dataelement.ListElement
 import id.walt.mdoc.dataelement.MapElement
@@ -35,7 +35,6 @@ import id.walt.mdoc.docrequest.MDocRequestBuilder
 import id.walt.mdoc.docrequest.MDocRequestVerificationParams
 import id.walt.mdoc.mdocauth.DeviceAuthentication
 import id.walt.mdoc.readerauth.ReaderAuthentication
-import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.decodeFromHexString
 import java.io.BufferedReader
 import java.io.ByteArrayInputStream
@@ -46,10 +45,10 @@ import java.security.KeyPair
 import java.security.PublicKey
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import java.util.OptionalLong
 import java.util.UUID
 
 
+// Copied and modified based on https://github.com/openwallet-foundation-labs/identity-credential/blob/main/samples/preconsent-mdl/src/main/java/com/android/identity/preconsent_mdl/TransferHelper.kt
 class QRTransferHelper(private val context: Context) {
 
 
@@ -57,6 +56,8 @@ class QRTransferHelper(private val context: Context) {
     var deviceRetrievalHelper: DeviceRetrievalHelper? = null
 
     var qrEng = MutableLiveData<String>("")
+
+    var state = MutableLiveData<String>()
 
     lateinit var eDeviceKeyPair: KeyPair
 
@@ -79,7 +80,7 @@ class QRTransferHelper(private val context: Context) {
 
 
         fun kill(){
-            this.instance = null
+            instance = null
         }
     }
 
@@ -100,12 +101,14 @@ class QRTransferHelper(private val context: Context) {
 
         override fun onDeviceConnecting() {
             Logger.d("MAIN HRV", "onDeviceConnecting")
+            state.value = "Connecting"
             //ODO("Not yet implemented")
         }
 
         override fun onDeviceConnected(p0: DataTransport) {
 
             Logger.d("MAIN HRV", "onDeviceConnected")
+            state.value = "Connected"
 
 
             val deviceRetrievalHelperBuilder = DeviceRetrievalHelper.Builder(
@@ -142,25 +145,7 @@ class QRTransferHelper(private val context: Context) {
             Logger.d("MAIN RET", "onDeviceRequest")
             Logger.d("MAIN RET", String(p0))
 
-            val credential = DrivingCredentialRequest(context).getCredential(context)
-
-
-            Logger.d("DEVICE REQUEST", String(p0))
-            Logger.d("DEVICE REQUEST", EncodedCBORElement(p0).toCBORHex())
-
-            val request = DeviceRequest.fromCBOR(p0)
-
-
-
-
-
-            //verifyCredentialRequest(request)
-
-            //val presentation = createPresentation(request)
-
-            //deviceRetrievalHelper!!.sendDeviceResponse("delulu".toByteArray(), OptionalLong.empty())
-            //deviceRetrievalHelper!!.sendDeviceResponse(credential!!.toCBOR(), OptionalLong.empty())
-            //deviceRetrievalHelper!!.sendDeviceResponse(presentation.toCBOR(), OptionalLong.empty())
+            state.value = "Request received"
 
             val i: Intent = Intent(context, RequestApprovalActivity::class.java)
             i.putExtra("mdoc_request", p0)
@@ -173,6 +158,7 @@ class QRTransferHelper(private val context: Context) {
 
         override fun onDeviceDisconnected(p0: Boolean) {
             Logger.d("MAIN RET", "onDeviceDisconnected")
+            kill()
             //ODO("Not yet implemented")
         }
 
@@ -194,9 +180,6 @@ class QRTransferHelper(private val context: Context) {
 
     init {
         val eDeviceKeyCurve = SecureArea.EC_CURVE_P256
-        /* val eDeviceKeyPair by lazy {
-            Util.createEphemeralKeyPair(eDeviceKeyCurve)
-        }*/
         eDeviceKeyPair = Util.createEphemeralKeyPair(eDeviceKeyCurve)
 
 
@@ -233,18 +216,6 @@ class QRTransferHelper(private val context: Context) {
         // test change to request; should fail validation (it did)
         //request_bytes[request_bytes.size-15] = 'c'.code.toByte()
 
-
-        Logger.d("REQUEST", request.toString())
-        Logger.d("REQUEST", request.docRequests.first().toString())
-        Logger.d("REQUEST", request.docRequests.first().itemsRequest.toString())
-        Logger.d("REQUEST", request.docRequests.first().decodedItemsRequest.toString())
-        Logger.d("REQUEST", request.docRequests.first().decodedItemsRequest.nameSpaces.value.toString())
-        Logger.d("REQUEST", request.docRequests.first().decodedItemsRequest.nameSpaces.value.keys.toString())
-        Logger.d("REQUEST VALUES", request.docRequests.first().decodedItemsRequest.nameSpaces.value.values.size.toString())
-
-        //Logger.d("REQUEST", EncodedCBORElement.fromEncodedCBORElementData(request_bytes).toCBORHex())
-
-        //println(EncodedCBORElement.fromEncodedCBORElementData(request_bytes).toCBORHex())
         val parsedMapElement = Cbor.decodeFromHexString<MapElement>(request.docRequests.first().decodedItemsRequest.nameSpaces.value.values.first().toCBORHex())
 
         Logger.d("REQUEST", parsedMapElement.toCBORHex())
@@ -262,23 +233,8 @@ class QRTransferHelper(private val context: Context) {
         val countries_secrets_folder = "issuer_secrets_hr"
         var rootCaCertificate: X509Certificate? = null;
 
-        // check for ROOT CA cert
-        if (/*rootCertFile.exists()*/true) {
-            if (/*rootCertFile.length() == 0L*/ false) {
-                //println("The file '$rootCertFile' is empty.")
-            } else {
-                //println("The file '$rootCertFile' is not empty.")
-                //println(rootJWKFile.readText())
-                //println("ROOT " +  Resources.getSystem().openRawResource(R.raw.root_ca_cert_hr).reader().readText())
-
-                val rootCaCertFile = context.assets.open("secrets/$countries_secrets_folder/root_ca_cert.json")
-                rootCaCertificate = X509CertUtils.parse(rootCaCertFile.reader().readText())
-                println("ROOT " + rootCaCertificate.toString())
-                //rootCaCertificate = X509CertUtils.parse(rootCertFile.readText())
-                //println(rootCertFile.readText())
-
-            }
-        }
+        val rootCaCertFile = context.assets.open("secrets/$countries_secrets_folder/root_ca_cert.json")
+        rootCaCertificate = X509CertUtils.parse(rootCaCertFile.reader().readText())
 
         var device_key : ECKey? = null
 
@@ -307,8 +263,6 @@ class QRTransferHelper(private val context: Context) {
 
         val sessionTranscript = EncodedCBORElement(deviceRetrievalHelper!!.sessionTranscript).decode() as ListElement
 
-
-
         val reqVerified = request.docRequests.first().verify(
             MDocRequestVerificationParams(
                 requiresReaderAuth = true,
@@ -327,17 +281,9 @@ class QRTransferHelper(private val context: Context) {
     //fun createPresentation(request: DeviceRequest): MDoc {
     fun createPresentation(request: MDocRequest): MDoc {
 
+        Logger.d("REQUEST ITEMS HRV", request.itemsRequest.toCBORHex())
 
         val sessionTranscript = EncodedCBORElement(deviceRetrievalHelper!!.sessionTranscript).decode() as ListElement
-
-        var certChain: List<X509Certificate>;
-
-        /*request.docRequests.first().readerAuth!!.x5Chain!!.let {
-            certChain = CertificateFactory.getInstance("X509").generateCertificates(
-                ByteArrayInputStream(it)
-            ).map { it as X509Certificate }
-            Logger.d("READER AUTH: ", certChain.toString())
-        }*/
 
         var device_key : ECKey? = null
 
@@ -359,24 +305,8 @@ class QRTransferHelper(private val context: Context) {
         val countries_secrets_folder = "issuer_secrets_hr"
         var rootCaCertificate: X509Certificate? = null;
 
-        // check for ROOT CA cert
-        if (/*rootCertFile.exists()*/true) {
-            if (/*rootCertFile.length() == 0L*/ false) {
-                //println("The file '$rootCertFile' is empty.")
-            } else {
-                //println("The file '$rootCertFile' is not empty.")
-                //println(rootJWKFile.readText())
-                //println("ROOT " +  Resources.getSystem().openRawResource(R.raw.root_ca_cert_hr).reader().readText())
-
-                val rootCaCertFile = context.assets.open("secrets/$countries_secrets_folder/root_ca_cert.json")
-                rootCaCertificate = X509CertUtils.parse(rootCaCertFile.reader().readText())
-                println("ROOT " + rootCaCertificate.toString())
-                //rootCaCertificate = X509CertUtils.parse(rootCertFile.readText())
-                //println(rootCertFile.readText())
-
-            }
-        }
-
+        val rootCaCertFile = context.assets.open("secrets/$countries_secrets_folder/root_ca_cert.json")
+        rootCaCertificate = X509CertUtils.parse(rootCaCertFile.reader().readText())
 
         val cryptoProvider_device = SimpleCOSECryptoProvider(
             listOf(
@@ -385,26 +315,33 @@ class QRTransferHelper(private val context: Context) {
             )
         )
 
-        //val device_auth = DeviceAuthentication(sessionTranscript, "org.iso.18013.5.1.mDL", request.docRequests.first().decodedItemsRequest.nameSpaces.toEncodedCBORElement())
         val device_auth = DeviceAuthentication(sessionTranscript, "org.iso.18013.5.1.mDL", request.decodedItemsRequest.nameSpaces.toEncodedCBORElement())
 
-        val dummy_request = MDocRequestBuilder("org.iso.18013.5.1.mDL").addDataElementRequest("org.iso.18013.5.1", "portrait", true)
-            .build()
+        Logger.d("Request items", request.decodedItemsRequest.nameSpaces.toEncodedCBORElement().toCBORHex())
+        Logger.d("Dev auth", device_auth.toDE().toCBORHex())
 
-        val presentation = DrivingCredentialRequest(context).getCredential(context)!!
+
+        /*val dummy_request = MDocRequestBuilder("org.iso.18013.5.1.mDL").addDataElementRequest("org.iso.18013.5.1", "portrait", true)
+            .build()*/
+
+        // we can not use this presentWithDeviceSignature function due to https://github.com/walt-id/waltid-identity/issues/420
+        /*val presentation = DrivingCredentialRequest(context).getCredential(context)!!
             .presentWithDeviceSignature(
-                //request.docRequests.first(),
                 request,
-                //dummy_request,
                 device_auth,
-                cryptoProvider_device, "DEVICE_KEY_ID")
+                cryptoProvider_device, "DEVICE_KEY_ID")*/
 
+        val myPresentation = presentWithDeviceSignatureHrv(
+            request,
+            device_auth,
+            cryptoProvider_device,
+            "DEVICE_KEY_ID",
+            selectDisclosures(request, DrivingCredentialRequest(context).getCredential(context)!!)
+        )
 
-        Logger.d("PRESENTATION", presentation.toCBORHex().length.toString())
-        Logger.d("PRESENTATION", presentation.toCBORHex().substring(0,2000))
-        Logger.d("PRESENTATION", presentation.toCBORHex().substring(2000))
-
-        return presentation
+        //return presentation
+        return myPresentation
     }
 
 }
+

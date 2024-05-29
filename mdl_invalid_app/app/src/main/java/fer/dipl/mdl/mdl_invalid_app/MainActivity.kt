@@ -1,12 +1,16 @@
-package fer.dipl.mdl.mdl_holder_app
+package fer.dipl.mdl.mdl_invalid_app
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -45,18 +49,18 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import fer.dipl.mdl.mdl_holder_app.ui.theme.MDL_holder_appTheme
+import fer.dipl.mdl.mdl_invalid_app.ui.theme.MDL_invalid_appTheme
 import com.android.identity.util.Logger
 
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.cbor.CBORFactory
 import com.google.zxing.WriterException
-import fer.dipl.mdl.mdl_holder_app.activities.NFCPresentationActivity
-import fer.dipl.mdl.mdl_holder_app.activities.QRPresentationActivity
-import fer.dipl.mdl.mdl_holder_app.activities.RequestCredentialActivity
-import fer.dipl.mdl.mdl_holder_app.helpers.DrivingCredentialRequest
-import fer.dipl.mdl.mdl_holder_app.helpers.QRTransferHelper
+import fer.dipl.mdl.mdl_invalid_app.activities.NFCPresentationActivity
+import fer.dipl.mdl.mdl_invalid_app.activities.QRPresentationActivity
+import fer.dipl.mdl.mdl_invalid_app.activities.RequestCredentialActivity
+import fer.dipl.mdl.mdl_invalid_app.helpers.DrivingCredentialRequest
+import fer.dipl.mdl.mdl_invalid_app.helpers.QRTransferHelper
 import id.walt.mdoc.doc.MDoc
 import java.util.Base64
 
@@ -86,8 +90,49 @@ data class DataElementHrv(
 
 class MainActivity : ComponentActivity() {
 
+    private val permissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            permissions.entries.forEach {
+                Logger.d("MAIN HRV", "permissionsLauncher ${it.key} = ${it.value}")
+                if (!it.value) {
+                    Toast.makeText(
+                        this,
+                        "The ${it.key} permission is required for BLE",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@registerForActivityResult
+                }
+            }
+        }
+
+    private val appPermissions: Array<String> =
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            arrayOf(
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            )
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val permissionsNeeded = appPermissions.filter { permission ->
+            ContextCompat.checkSelfPermission(
+                applicationContext,
+                permission
+            ) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (permissionsNeeded.isNotEmpty()) {
+            permissionsLauncher.launch(
+                permissionsNeeded.toTypedArray()
+            )
+        }
 
         QRTransferHelper.kill()
 
@@ -110,7 +155,7 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
-            MDL_holder_appTheme {
+            MDL_invalid_appTheme {
                 // A surface container using the 'background' color from the theme
                 MainContent(applicationContext = applicationContext, bitmap = bmp, credential)
             }
@@ -199,6 +244,8 @@ fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?){
             }
 
         }
+
+        Logger.d("PORTRAIT", portrait)
 
         val portrait_byte_array = Base64.getUrlDecoder().decode(portrait)
         portrait_image = BitmapFactory.decodeByteArray(portrait_byte_array, 0, portrait_byte_array.size)

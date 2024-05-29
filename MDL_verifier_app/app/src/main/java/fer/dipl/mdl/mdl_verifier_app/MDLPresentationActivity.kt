@@ -10,6 +10,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -23,7 +24,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -33,6 +37,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -44,8 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.android.identity.mdoc.util.MdocUtil
 import id.walt.mdoc.doc.MDoc
@@ -65,8 +73,9 @@ class MDLPresentationActivity : ComponentActivity() {
 
         val extras = intent.extras
 
+        VerifierTransferHelper.getInstance(applicationContext, this)
+            .verificationHelper!!.disconnect()
 
-        //Logger.d("PRESENTATION", mdoc_mdoc.toCBORHex())
 
         val mdoc = extras!!.getByteArray("mdoc_bytes")
         val mdoc_mdoc = MDoc.fromCBOR(mdoc!!)
@@ -81,15 +90,12 @@ class MDLPresentationActivity : ComponentActivity() {
 
         var bmp = Bitmap.createBitmap(50, 50, Bitmap.Config.RGB_565)
         try {
-            //val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
             for (x in 0 until 50) {
                 for (y in 0 until 50) {
                     //bmp.setPixel(x, y, 4292018175.toInt())
                     bmp.setPixel(x, y, if (true) Int.MIN_VALUE else Int.MAX_VALUE)
-
                 }
             }
-            //(findViewById<View>(R.id.img_result_qr) as ImageView).setImageBitmap(bmp)
         } catch (e: WriterException) {
             e.printStackTrace()
         }
@@ -107,13 +113,8 @@ class MDLPresentationActivity : ComponentActivity() {
 
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?, issuer_signature_verified:Boolean, device_signature_verified: Boolean, issuer_certificate_verified:Boolean){
-    var driving_credential_present by remember { mutableStateOf(false) }
-    var test_data by remember {
-        mutableStateOf(0)
-    }
 
     var family_name = ""
     var given_name:String = ""
@@ -123,91 +124,72 @@ fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?, 
     var expiry_date:String = ""
     var issuing_country:String = ""
     var issuing_authority:String = ""
-    var age_over_18:Boolean = false
-    var age_over_21:Boolean = false
-    var age_over_24:Boolean = false
-    var age_over_65:Boolean = false
+    var age_over_18:Boolean? = null
+    var age_over_21:Boolean? = null
+    var age_over_24:Boolean? = null
+    var age_over_65:Boolean? = null
     var driving_privileges = ""
+    var document_number = ""
 
     var portrait_image: Bitmap = bitmap
 
     if(credential != null){
         Logger.d("CREDENTIAL ALREADY EXISTS", credential!!.issuerSigned.nameSpaces?.keys.toString())
         credential!!.issuerSigned.nameSpaces?.get("org.iso.18013.5.1")?.forEach {
-            Logger.d("NAME SPACE ITEAM", it.decode().value.toString())
-            val temp_hrv = decodeNameSpace(it.value)
-            Logger.d("NAME SPACE ITEAM", temp_hrv.toString())
-            Logger.d("NAME SPACE ITEAM IDENTIFIER", temp_hrv.elementIdentifier)
-            Logger.d("NAME SPACE ITEAM VALUE", temp_hrv.elementValue.toString())
+            val data_element = decodeNameSpace(it.value)
 
-            when(temp_hrv.elementIdentifier){
+            when(data_element.elementIdentifier){
                 "family_name" -> {
-                    family_name = temp_hrv.elementValue.toString()
+                    family_name = data_element.elementValue.toString()
                 }
                 "given_name" -> {
-                    given_name = temp_hrv.elementValue.toString()
+                    given_name = data_element.elementValue.toString()
                 }
                 "portrait" -> {
-                    portrait = temp_hrv.elementValue.toString()
+                    portrait = data_element.elementValue.toString()
                 }
                 "birth_date" -> {
-                    birth_date = temp_hrv.elementValue.toString()
+                    birth_date = data_element.elementValue.toString()
                 }
                 "issue_date" -> {
-                    issue_date = temp_hrv.elementValue.toString()
+                    issue_date = data_element.elementValue.toString()
                 }
                 "expiry_date" -> {
-                    expiry_date = temp_hrv.elementValue.toString()
+                    expiry_date = data_element.elementValue.toString()
                 }
                 "issuing_country" -> {
-                    issuing_country = temp_hrv.elementValue.toString()
+                    issuing_country = data_element.elementValue.toString()
                 }
                 "issuing_authority" -> {
-                    issuing_authority = temp_hrv.elementValue.toString()
+                    issuing_authority = data_element.elementValue.toString()
                 }
                 "age_over_18" -> {
-                    age_over_18 = temp_hrv.elementValue as Boolean
+                    age_over_18 = data_element.elementValue as Boolean
                 }
                 "age_over_21" -> {
-                    age_over_21 = temp_hrv.elementValue as Boolean
+                    age_over_21 = data_element.elementValue as Boolean
                 }
                 "age_over_24" -> {
-                    age_over_24 = temp_hrv.elementValue as Boolean
+                    age_over_24 = data_element.elementValue as Boolean
                 }
                 "age_over_65" -> {
-                    age_over_65 = temp_hrv.elementValue as Boolean
+                    age_over_65 = data_element.elementValue as Boolean
                 }
                 "driving_privileges" -> {
-                    driving_privileges = temp_hrv.elementValue.toString()
+                    driving_privileges = data_element.elementValue.toString()
+                }
+                "document_number" -> {
+                    document_number = data_element.elementValue.toString()
                 }
 
             }
 
         }
-        Logger.d("PARSED MDOC family_name", family_name)
-        Logger.d("PARSED MDOC given_name", given_name)
-        Logger.d("PARSED MDOC portrait", portrait)
-        Logger.d("PARSED MDOC birth_date", birth_date)
-        Logger.d("PARSED MDOC issue_date", issue_date)
-        Logger.d("PARSED MDOC expiry_date", expiry_date)
-        Logger.d("PARSED MDOC issuing_country", issuing_country)
-        Logger.d("PARSED MDOC issuing_authority", issuing_authority)
-        Logger.d("PARSED MDOC age_over_18", age_over_18.toString())
-        Logger.d("PARSED MDOC age_over_21", age_over_21.toString())
-        Logger.d("PARSED MDOC age_over_24", age_over_24.toString())
-        Logger.d("PARSED MDOC age_over_65", age_over_65.toString())
-        Logger.d("PARSED MDOC driving_privileges", driving_privileges.toString())
-
 
         val portrait_byte_array = Base64.getUrlDecoder().decode(portrait)
         portrait_image = BitmapFactory.decodeByteArray(portrait_byte_array, 0, portrait_byte_array.size)
 
-
     }
-
-
-
-
 
 
     Surface(
@@ -215,337 +197,465 @@ fun MainContent(applicationContext: Context, bitmap: Bitmap, credential: MDoc?, 
         color = MaterialTheme.colorScheme.background
     ) {
         Scaffold(
-            topBar = {
-                     TopAppBar(title = { "Testing"})
-            },
             bottomBar = {
                 BottomAppBar(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.primary,
                 ) {
-                    /*Text(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        textAlign = TextAlign.Center,
-                        text = "Bottom app bar",
-                    )*/
-                    /*Row {
+
+                    Row {
                         Button(
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 Logger.d("MAIN HRV", "buttons")
-                                val i: Intent = Intent(applicationContext, NFCPresentationActivity::class.java)
-                                //i.putExtra("qr_code_value", transferHelper.qrEng.value)
+                                val i: Intent = Intent(applicationContext, MainActivity::class.java)
                                 i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 ContextCompat.startActivity(applicationContext, i, null)
                             }
                         ) {
-                            Text(text = "NFC ENGAGEMENT")
-                            Icon(Icons.Default.Add, contentDescription = "Add")
+                            Text(text = "Exit")
+                            Icon(Icons.Default.ExitToApp, contentDescription = "Exit")
                         }
-                        Button(
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                Logger.d("MAIN HRV", "buttons1")
-                                val transferHelper = QRTransferHelper.getInstance(applicationContext)
-                                if (transferHelper.qrEng.value == ""){
-                                    Logger.d("MAIN HRV", "button its null")
-                                }else{
-                                    Logger.d("MAIN HRV", transferHelper.qrEng.value!!)
-                                    val i: Intent = Intent(applicationContext, QRPresentationActivity::class.java)
-                                    i.putExtra("qr_code_value", transferHelper.qrEng.value)
-                                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    ContextCompat.startActivity(applicationContext, i, null)
-                                }
-                            }
-                        ) {
-                            Text(text = "QR CODE")
-                            Icon(Icons.Default.Add, contentDescription = "Add")
-                        }
-                    }*/
 
-                }
-            },
-            /*floatingActionButton = {
-                FloatingActionButton(onClick = {
-                    Logger.d("MAIN HRV", "buttons")
-                    }
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add")
-                }
-            }*/
-
-            /*floatingActionButton = {
-                if (!driving_credential_present){
-                    FloatingActionButton(
-                        onClick = {
-                            Logger.d("MAIN HRV", "request")
-                            val i: Intent = Intent(applicationContext, RequestCredentialActivity::class.java)
-                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            ContextCompat.startActivity(applicationContext, i, null)
-                        },) {
-                        Text(text = "Request credential")
-                        //Icon(Icons.Default.Add, contentDescription = "Add")
                     }
                 }
-
-            }*/
-
+            }
         ){
                 innerPadding ->
             Column(
                 modifier = Modifier
                     .padding(innerPadding)
-                    //.verticalScroll(
-                    //    rememberScrollState()
-                    //)
                     .fillMaxSize()
                     .fillMaxHeight()
-                    //.wrapContentHeight(align = Alignment.CenterVertically)
-                    .background(Color.Red)
                 ,
-                //verticalArrangement = Arrangement.spacedBy(1.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Card (
                     modifier = Modifier
-                        //.size(width = 240.dp, height = 100.dp)
                         .fillMaxWidth()
                         .padding(10.dp)
                         .verticalScroll(rememberScrollState())
-                    //.align(Alignment.CenterHorizontally)
                     ,
                 ){
                     Row (
                         modifier = Modifier
                             .height(150.dp)
-                            .background(Color.Cyan)
+                            .background(MaterialTheme.colorScheme.primary)
                             .fillMaxWidth()
                             .align(Alignment.CenterHorizontally),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ){
                         Image(
-                            //bitmap = bitmap.asImageBitmap(),
-                            //bitmap = credential == null ? portrait_image.asImageBitmap(),
                             bitmap = if (credential == null){bitmap.asImageBitmap()}else{portrait_image.asImageBitmap()},
                             contentDescription = "some useful description",
                             modifier = Modifier
-                                //.width((Resources.getSystem().displayMetrics.widthPixels
-                                //        / Resources.getSystem().displayMetrics.densityDpi) .dp)
                                 .size(125.dp)
-                            //.align(Alignment.CenterVertically)
-                            //.padding(10.dp)
                         )
                     }
 
-                    Row {
-                        Text(
-                            text = "Given name:",
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(1f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = given_name,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(2f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
+                    if (given_name.isNotEmpty()){
+                        Row {
+                            Text(
+                                text = "Given name:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = given_name,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                    Row {
-                        Text(
-                            text = "Family name:",
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(1f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = family_name,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(2f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
+                    if (family_name.isNotEmpty()){
+                        Row {
+                            Text(
+                                text = "Family name:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = family_name,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                    Row {
-                        Text(
-                            text = "Birth date:",
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(1f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = birth_date,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(2f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
+                    if (birth_date.isNotEmpty()){
+                        Row {
+                            Text(
+                                text = "Birth date:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = birth_date,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                    Row {
-                        Text(
-                            text = "Expiry date:",
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(1f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = expiry_date,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(2f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
+                    if (expiry_date.isNotEmpty()){
+                        Row {
+                            Text(
+                                text = "Expiry date:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = expiry_date,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                    Row {
-                        Text(
-                            text = "Issue date:",
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(1f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = issue_date,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(2f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
+                    if (issue_date.isNotEmpty()){
+                        Row {
+                            Text(
+                                text = "Issue date:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = issue_date,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    if (document_number.isNotEmpty()){
+                        Row {
+                            Text(
+                                text = "Document number:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = document_number,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    if (issuing_country.isNotEmpty()){
+                        Row {
+                            Text(
+                                text = "Issuing country:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = issuing_country,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    if (issuing_authority.isNotEmpty()){
+                        Row {
+                            Text(
+                                text = "Issuing authority:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = issuing_authority,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    if (driving_privileges.isNotEmpty()){
+                        Row {
+                            Text(
+                                text = "Driving privileges:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = driving_privileges,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    if (age_over_18 != null){
+                        Row {
+                            Text(
+                                text = "Age over 18:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = age_over_18.toString(),
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    if (age_over_21 != null){
+                        Row {
+                            Text(
+                                text = "Age over 21:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = age_over_21.toString(),
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    if (age_over_24 != null){
+                        Row {
+                            Text(
+                                text = "Age over 24:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = age_over_24.toString(),
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                    if (age_over_65 != null){
+                        Row {
+                            Text(
+                                text = "Age over 65:",
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(1f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = age_over_65.toString(),
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .width(200.dp)
+                                    .weight(2f)
+                                ,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
 
-                    Row {
-                        Text(
-                            text = "Issuing country:",
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(1f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = issuing_country,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(2f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                    Row {
-                        Text(
-                            text = "Issuing authority:",
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(1f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = issuing_authority,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(2f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                    Row {
-                        Text(
-                            text = "Driving privileges:",
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(1f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                        Text(
-                            text = driving_privileges,
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(Color.Yellow)
-                                .width(200.dp)
-                                .weight(2f)
-                            ,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+
+
+
+
                     Row {
                         Text(
                             text = "Verification:",
                             modifier = Modifier
                                 .padding(16.dp)
-                                .background(Color.Yellow)
                                 .width(200.dp)
                                 .weight(1f)
                             ,
-                            textAlign = TextAlign.Center
+                            fontSize = 27.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Left
                         )
                     }
                     Row {
-                        Text(text = "Issuer signature verified: ${issuer_signature_verified}" )
+                        Text(
+                            text = "Issuer signature verified: ",
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .weight(2f)
+                        )
+                        if (issuer_signature_verified){
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .size(25.dp)
+                                    .weight(1f)
+                                ,
+                                tint = Color.Green,
+                                )
+                        }else{
+                            Icon(
+                                imageVector = Icons.Filled.Warning,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(128.dp)
+                                    .align(Alignment.CenterVertically)
+                                    .weight(1f)
+                                ,
+                                tint = Color.Red
+                            )
+                        }
                     }
+
                     Row {
-                        Text(text = "Device signature verified: ${device_signature_verified}" )
+                        Text(
+                            text = "Device signature verified: ",
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .weight(2f)
+                        )
+                        if (device_signature_verified){
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .size(25.dp)
+                                    .weight(1f)
+                                ,
+                                tint = Color.Green,
+                            )
+                        }else{
+                            Icon(
+                                imageVector = Icons.Filled.Warning,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(25.dp)
+                                    .align(Alignment.CenterVertically)
+                                    .weight(1f)
+                                ,
+                                tint = Color.Red
+                            )
+                        }
                     }
+
                     Row {
-                        Text(text = "Issuer certificate verified: ${issuer_certificate_verified}" )
+                        Text(
+                            text = "Issuer certificate verified: ",
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .weight(2f)
+                        )
+                        if (issuer_certificate_verified){
+                            Icon(
+                                imageVector = Icons.Filled.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .size(25.dp)
+                                    .weight(1f)
+                                ,
+                                tint = Color.Green,
+                            )
+                        }else{
+                            Icon(
+                                imageVector = Icons.Filled.Warning,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(25.dp)
+                                    .align(Alignment.CenterVertically)
+                                    .weight(1f)
+                                ,
+                                tint = Color.Red
+                            )
+                        }
                     }
-
-
-
-
                 }
-
             }
-
         }
     }
 }
@@ -561,9 +671,8 @@ data class DataElementHrv(
     val elementIdentifier: String,
     val elementValue: Any
 ){
-    // Ensure a primary constructor is available
     constructor() : this("", byteArrayOf(), "","")
-    //constructor() : this(byteArrayOf())
+
     override fun toString(): String {
         var tmp = "DataElementHrv("
         tmp += "digestID=" + digestID + ", "

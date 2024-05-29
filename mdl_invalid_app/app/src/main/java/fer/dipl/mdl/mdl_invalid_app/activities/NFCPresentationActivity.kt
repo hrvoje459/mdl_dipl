@@ -1,22 +1,24 @@
-package fer.dipl.mdl.mdl_verifier_app
+package fer.dipl.mdl.mdl_invalid_app.activities
 
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
-import android.nfc.NfcAdapter
+import android.content.ServiceConnection
+import android.hardware.biometrics.BiometricManager
+import android.hardware.biometrics.BiometricPrompt
 import android.os.Bundle
-import android.os.PersistableBundle
-import android.os.SystemClock.sleep
+import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.BottomAppBar
@@ -27,56 +29,54 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
-import com.android.identity.android.mdoc.deviceretrieval.VerificationHelper
-import com.android.identity.android.mdoc.transport.DataTransportOptions
-import com.android.identity.mdoc.connectionmethod.ConnectionMethod
-import com.android.identity.mdoc.connectionmethod.ConnectionMethodBle
 import com.android.identity.util.Logger
-import com.budiyev.android.codescanner.CodeScanner
-import com.budiyev.android.codescanner.CodeScannerView
-import com.budiyev.android.codescanner.DecodeCallback
-import com.budiyev.android.codescanner.ErrorCallback
-import com.budiyev.android.codescanner.ScanMode
-import fer.dipl.mdl.mdl_verifier_app.ui.theme.MDL_verifier_appTheme
-import java.util.UUID
+import fer.dipl.mdl.mdl_invalid_app.helpers.NFCTransferHelper
+import fer.dipl.mdl.mdl_invalid_app.helpers.NfcEngagementHandler
+import fer.dipl.mdl.mdl_invalid_app.helpers.QRTransferHelper
+import fer.dipl.mdl.mdl_invalid_app.ui.theme.MDL_invalid_appTheme
 
-class NFCScanActivity : ComponentActivity() {
 
-    //private lateinit var verifierTransferHelper: VerifierTransferHelper
-    private lateinit var transferHelper: VerifierTransferHelper
+class NFCPresentationActivity: ComponentActivity() {
 
+    private lateinit var nfcTransferHelper: NFCTransferHelper
+
+    lateinit var ser_con :ServiceConnection
+
+        @Override
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        transferHelper = VerifierTransferHelper.getInstance(applicationContext, this)
+        nfcTransferHelper = NFCTransferHelper.getInstance(applicationContext)
 
+         ser_con = object :ServiceConnection{
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+                Logger.d("MAIN SERVICE CONN", "onServiceConnected")
+            }
 
-        val extras = intent.extras
+            override fun onServiceDisconnected(name: ComponentName?) {
+                Logger.d("MAIN SERVICE CONN", "onServiceDisconnected")
+            }
+        }
 
-        Logger.d("REQ NFC", extras!!.getStringArrayList("requested_items").toString())
-
-        transferHelper.setRequestedItems(extras!!.getStringArrayList("requested_items")!!.toTypedArray())
+        bindService(
+            Intent(this, NfcEngagementHandler::class.java),
+            ser_con,
+            Context.BIND_AUTO_CREATE
+        )
 
         setContent {
-            MDL_verifier_appTheme {
+            MDL_invalid_appTheme {
 
                 var stateDisplay = remember { mutableStateOf("Idle") }
 
-                transferHelper.state.observe(this as LifecycleOwner){ state ->
+                nfcTransferHelper.state.observe(this as LifecycleOwner){state ->
                     stateDisplay.value = state
-                    if (state == "Error"){
-                        transferHelper.verificationHelper!!.disconnect()
-                        VerifierTransferHelper.kill()
-                    }
                 }
 
                 // A surface container using the 'background' color from the theme
@@ -105,17 +105,8 @@ class NFCScanActivity : ComponentActivity() {
                                         modifier = Modifier.weight(1f),
                                         onClick = {
                                             Logger.d("MAIN HRV", "buttons2")
-
-                                            val i: Intent = Intent(applicationContext, QRScanActivity::class.java)
-
-                                            val requested_items : ArrayList<String> = arrayListOf()
-                                            transferHelper.getRequestedItems().forEach { requested_items.add(it) }
-
-                                            VerifierTransferHelper.kill()
-
-                                            i.putExtra("requested_items", requested_items)
-                                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                            ContextCompat.startActivity(applicationContext, i, null)
+                                            val transferHelper =
+                                                QRTransferHelper.getInstance(applicationContext)
                                         }
                                     ) {
                                         Text(text = "QR CODE")
@@ -143,20 +134,33 @@ class NFCScanActivity : ComponentActivity() {
                                     trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                 )
                             }
+
+
                             Text(text = stateDisplay.value)
                         }
                     }
                 }
-                }
             }
         }
-
-
-    override fun onStop() {
-        Logger.d("STOP", "STOP NFC")
-        super.onStop()
-        VerifierTransferHelper.kill()
-        Logger.d("STOP", "STOP NFC")
     }
+
+    @Override
+    override fun onPause() {
+        Logger.d("MAIN SERVICE STOP", "STOP")
+
+        unbindService(ser_con)
+        super.onPause()
+    }
+    /*@Override
+    override fun onStop() {
+        super.onStop()
+        TransferHelper.kill()
+        transferHelper.qrEngagementHelper?.close()
+        transferHelper.deviceRetrievalHelper?.disconnect()
+
+        Logger.d("MAIN DESTROY", "on QR exit")
+    }*/
 }
+
+
 

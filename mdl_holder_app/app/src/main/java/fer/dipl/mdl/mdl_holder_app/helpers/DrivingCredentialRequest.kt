@@ -1,8 +1,7 @@
-package fer.dipl.mdl.mdl_holder_app
+package fer.dipl.mdl.mdl_holder_app.helpers
 
 import android.content.Context
 import android.os.StrictMode
-import android.widget.Toast
 import com.android.identity.util.Logger
 import id.walt.crypto.keys.KeyType
 import id.walt.crypto.keys.jwk.JWKKey
@@ -145,11 +144,11 @@ class DrivingCredentialRequest(context: Context){
         StrictMode.setThreadPolicy(policy)
         when(country){
             "Croatia" -> {
-                val client_id = "<client_id>"
-                val client_secret = "<client_secret>"
-                val issuer_backend_url = "https://issuer-backend-hr.<domain>"
-                val issuer_api_url = "https://issuer-api-hr.<domain>"
-                val idp_url = "https://hrv-idp.<domain>/auth/realms/MDL"
+                val client_id = "issuer_application"
+                val client_secret = "LOLYAla7PWDEQsrCehkMbo6YLZzswoJ8"
+                val issuer_backend_url = "https://issuer-backend-hr.mdlissuer.xyz"
+                val issuer_api_url = "https://issuer-api-hr.mdlissuer.xyz"
+                val idp_url = "https://hrv-idp.mdlissuer.xyz/auth/realms/MDL"
 
                 init_user_key(context)
 
@@ -172,11 +171,11 @@ class DrivingCredentialRequest(context: Context){
 
             }
             "Slovenia" -> {
-                val client_id = "<client_id>"
-                val client_secret = "<client_secret>"
-                val issuer_backend_url = "https://issuer-backend-slo.<domain>"
-                val issuer_api_url = "https://issuer-api-slo.<domain>"
-                val idp_url = "https://slo-idp.<domain>/auth/realms/MDL"
+                val client_id = "issuer_application"
+                val client_secret = "4icLik5qsQPNih5Vf2fB8hXKOXzlWoi2"
+                val issuer_backend_url = "https://issuer-backend-slo.mdlissuer.xyz"
+                val issuer_api_url = "https://issuer-api-slo.mdlissuer.xyz"
+                val idp_url = "https://slo-idp.mdlissuer.xyz/auth/realms/MDL"
 
                 init_user_key(context)
 
