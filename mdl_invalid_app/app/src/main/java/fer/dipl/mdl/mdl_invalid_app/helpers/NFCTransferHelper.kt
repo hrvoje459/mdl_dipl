@@ -86,12 +86,6 @@ class NFCTransferHelper(private val context: Context) {
             Logger.d("MAIN RET", String(p0))
             state.value = "Device Request Received"
 
-            val credential = DrivingCredentialRequest(context).getCredential(context)
-            val request = DeviceRequest.fromCBOR(p0)
-
-            //Logger.d("DEVICE REQUEST", String(p0))
-            //Logger.d("DEVICE REQUEST", EncodedCBORElement(p0).toCBORHex())
-
             val i: Intent = Intent(context, RequestApprovalActivity::class.java)
             i.putExtra("mdoc_request", p0)
             i.putExtra("initiator", "NFC")
@@ -140,13 +134,6 @@ class NFCTransferHelper(private val context: Context) {
 
 
     fun verifyCredentialRequest(request: DeviceRequest): Boolean{
-
-        // test change to request; should fail validation (it did)
-        //request_bytes[request_bytes.size-15] = 'c'.code.toByte()
-
-        //val parsedMapElement = Cbor.decodeFromHexString<MapElement>(request.docRequests.first().decodedItemsRequest.nameSpaces.value.values.first().toCBORHex())
-
-        //Logger.d("REQUEST", parsedMapElement.toCBORHex())
 
         var certChain: List<X509Certificate>;
 
@@ -206,23 +193,12 @@ class NFCTransferHelper(private val context: Context) {
 
         val sessionTranscript = EncodedCBORElement(deviceRetrievalHelper!!.sessionTranscript).decode() as ListElement
 
-        //var certChain: List<X509Certificate>;
-
-        /*request.docRequests.first().readerAuth!!.x5Chain!!.let {
-            certChain = CertificateFactory.getInstance("X509").generateCertificates(
-                ByteArrayInputStream(it)
-            ).map { it as X509Certificate }
-            Logger.d("READER AUTH: ", certChain.toString())
-        }*/
-
         var device_key : ECKey? = null
 
         try {
             val readFile = File(context.filesDir, "mdoc_dir/user_key.txt")
             val fIn: FileInputStream = FileInputStream(readFile)
             val myReader = BufferedReader(InputStreamReader(fIn))
-
-            //bufferString = myReader.readText()
 
             device_key = ECKey.parse(myReader.readText())
 
@@ -231,24 +207,13 @@ class NFCTransferHelper(private val context: Context) {
             e.printStackTrace()
         }
 
-
-        //val countries_secrets_folder = "issuer_secrets_hr"
-        //var rootCaCertificate: X509Certificate? = null;
-
-        //val rootCaCertFile = context.assets.open("secrets/$countries_secrets_folder/root_ca_cert.json")
-        //rootCaCertificate = X509CertUtils.parse(rootCaCertFile.reader().readText())
-
-
         val cryptoProvider_device = SimpleCOSECryptoProvider(
             listOf(
-                //COSECryptoProviderKeyInfo("DEVICE_KEY_ID", AlgorithmID.ECDSA_256,  device_key!!.toECPublicKey(), device_key!!.toECPrivateKey(), x5Chain = listOf(), trustedRootCAs =  listOf(rootCaCertificate!!)),
                 COSECryptoProviderKeyInfo("DEVICE_KEY_ID", AlgorithmID.ECDSA_256,  device_key!!.toECPublicKey(), device_key!!.toECPrivateKey(), x5Chain = listOf(), trustedRootCAs =  listOf()),
             )
         )
 
-        //val device_auth = DeviceAuthentication(sessionTranscript, "org.iso.18013.5.1.mDL", request.docRequests.first().decodedItemsRequest.nameSpaces.toEncodedCBORElement())
-        val device_auth = DeviceAuthentication(sessionTranscript, "org.iso.18013.5.1.mDL", request.decodedItemsRequest.nameSpaces.toEncodedCBORElement())
-
+        val device_auth = DeviceAuthentication(sessionTranscript, "org.iso.18013.5.1.mDL", EncodedCBORElement(MapElement(mapOf())))
 
         val presentation = DrivingCredentialRequest(context).getCredential(context)!!
             .presentWithDeviceSignature(
@@ -256,43 +221,6 @@ class NFCTransferHelper(private val context: Context) {
                 device_auth,
                 cryptoProvider_device, "DEVICE_KEY_ID")
 
-
-        val myPresentation = presentWithDeviceSignatureHrv(
-            request,
-            device_auth,
-            cryptoProvider_device,
-            "DEVICE_KEY_ID",
-            selectDisclosures(request, DrivingCredentialRequest(context).getCredential(context)!!)
-        )
-
-        //return presentation
-        return  myPresentation
+        return presentation
     }
-
-
 }
-
-
-// These function are extracted here and modified to get around this issue: https://github.com/walt-id/waltid-identity/issues/420
-fun presentWithDeviceSignatureHrv(mDocRequest: MDocRequest, deviceAuthentication: DeviceAuthentication, cryptoProvider: COSECryptoProvider, keyID: String? = null, issuer_signed:IssuerSigned): MDoc {
-    val coseSign1 = cryptoProvider.sign1(getDeviceSignedPayload(deviceAuthentication), keyID).detachPayload()
-    return MDoc(
-         StringElement("org.iso.18013.5.1.mDL"),
-        issuer_signed,
-        DeviceSigned(EncodedCBORElement(mDocRequest.decodedItemsRequest.nameSpaces), DeviceAuth(deviceSignature = coseSign1))
-    )
-}
-
-
-fun selectDisclosures(mDocRequest: MDocRequest, credential:MDoc): IssuerSigned {
-    return IssuerSigned(
-        credential.issuerSigned.nameSpaces?.mapValues { entry ->
-            val requestedItems = mDocRequest.getRequestedItemsFor(entry.key)
-            entry.value.filter { encodedItem ->
-                requestedItems.containsKey(encodedItem.decode<IssuerSignedItem>().elementIdentifier.value)
-            }
-        },
-        credential.issuerSigned.issuerAuth
-    )
-}
-fun getDeviceSignedPayload(deviceAuthentication: DeviceAuthentication) = EncodedCBORElement(deviceAuthentication.toDE()).toCBOR()

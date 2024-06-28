@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.nfc"
+        android:required="true" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/attacker"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/attacker"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MDL_invalid_app"
+        tools:targetApi="31">
+        <activity
+            android:name=".StartingActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_invalid_app">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".activities.QRPresentationActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_invalid_app">
+        </activity>
+        <activity
+            android:name=".activities.NFCPresentationActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_invalid_app">
+        </activity>
+        <activity
+            android:name=".activities.RequestCredentialActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_invalid_app">
+        </activity>
+        <activity
+            android:name=".activities.RequestApprovalActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_invalid_app">
+        </activity>
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_invalid_app">
+        </activity>
+        <activity
+            android:name=".ExitActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_invalid_app">
+        </activity>
+
+
+        <service
+            android:name=".helpers.NfcEngagementHandler"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NFC_SERVICE">
+            <intent-filter>
+                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+                <action android:name="fer.dipl.mdl.mdl_invalid_app.activities.NFCPresentationActivity" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/nfc_engagement_apdu_service" />
+
+
+        </service>
+
+
+
+
+
+    </application>
+
+</manifest>

@@ -14,6 +14,10 @@ import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.dataelement.BooleanElement
 import id.walt.mdoc.dataelement.DataElement
 import id.walt.mdoc.dataelement.FullDateElement
+import id.walt.mdoc.dataelement.ListElement
+import id.walt.mdoc.dataelement.MapElement
+import id.walt.mdoc.dataelement.MapKey
+import id.walt.mdoc.dataelement.StringElement
 import id.walt.mdoc.dataelement.toDE
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.doc.MDocBuilder
@@ -24,6 +28,9 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.asn1.x509.BasicConstraints
 import org.bouncycastle.asn1.x509.Extension
@@ -251,6 +258,35 @@ class DrivingCredentialRequest(context: Context){
         // create device key info structure of device public key, for holder binding
         val deviceKeyInfo = DeviceKeyInfo(DataElement.fromCBOR(OneKey(pirate_ec_key.toECPublicKey(), null).AsCBOR().EncodeToBytes()))
 
+
+        val driving_privileges_json = Json.parseToJsonElement("[{ \"codes\": [{\"code\": \"B\"}], \"vehicle_category_code\": \"B\", \"issue_date\": \"2019-01-01\" }]")
+        var driving_privileges_list = listOf<MapElement>()
+        var map: Map<MapKey, StringElement>  = mapOf()
+
+        driving_privileges_json.jsonArray.forEach { it ->
+            val vehicle_category_code = Pair(
+                MapKey("vehicle_category_code"), StringElement(it.jsonObject?.get("vehicle_category_code")
+                    .toString().replace("\"",""))
+            )
+            val issue_date = Pair(MapKey("issue_date"), FullDateElement(LocalDate.parse(it.jsonObject?.get("issue_date").toString().replace("\"",""))))
+
+            var expiry_date: Pair<MapKey, FullDateElement>? = null
+
+            if (it.jsonObject?.get("expiry_date").toString().replace("\"","") != "null"){
+                expiry_date = Pair(MapKey("expiry_date"), FullDateElement(LocalDate.parse(it.jsonObject?.get("expiry_date").toString().replace("\"",""))))
+            }
+
+            println("EXPIRY: " + expiry_date.toString())
+            if (expiry_date != null){
+                driving_privileges_list = driving_privileges_list.plus(MapElement(mapOf(vehicle_category_code, issue_date, expiry_date)))
+            }else{
+                driving_privileges_list = driving_privileges_list.plus(MapElement(mapOf(vehicle_category_code, issue_date)))
+            }
+        }
+
+        val driving_privileges_list_element  = ListElement(driving_privileges_list)
+
+
         // build mdoc and sign using issuer key with holder binding to device key
         val mdoc = MDocBuilder("org.iso.18013.5.1.mDL")
             .addItemToSign("org.iso.18013.5.1", "family_name", "Bob".replace("\"","").toDE())
@@ -268,6 +304,8 @@ class DrivingCredentialRequest(context: Context){
             .addItemToSign("org.iso.18013.5.1", "age_over_24", BooleanElement(false))
             .addItemToSign("org.iso.18013.5.1", "age_over_65", BooleanElement(false))
             .addItemToSign("org.iso.18013.5.1", "document_number", "1234987".toString().replace("\"","").toDE())
+            .addItemToSign("org.iso.18013.5.1", "driving_privileges", driving_privileges_list_element)
+
             .sign(
                 ValidityInfo(Clock.System.now(), Clock.System.now(), Clock.System.now().plus(365*24, DateTimeUnit.HOUR)),
                 deviceKeyInfo, cryptoProvider, "ISSUER_KEY_ID"
