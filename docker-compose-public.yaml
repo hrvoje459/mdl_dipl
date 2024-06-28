@@ -83,14 +83,14 @@ services:
 
   not-issuer-api-hr.<domain>:
     hostname: not-issuer-api-hr.<domain>
-    image: hrvoje45/issuer-api:1.0.1
+    image: hrvoje45/issuer-api:1.0.3
     ports:
       - 7002:7002
     command: ["--webHost=0.0.0.0", "--webPort=7002", "--baseUrl=https://<secret>"]
 
   issuer-backend-hr.<domain>:
     hostname: issuer-backend-hr.<domain>
-    image: hrvoje45/issuer_backend:1.0.2
+    image: hrvoje45/issuer_backend:1.0.7
     ports:
       - 8001:8080
     depends_on:
@@ -108,14 +108,14 @@ services:
 
   not-issuer-api-slo.<domain>:
     hostname: not-issuer-api-slo.<domain>
-    image: hrvoje45/issuer-api:1.0.1
+    image: hrvoje45/issuer-api:1.0.3
     ports:
       - 7003:7003
     command: ["--webHost=0.0.0.0", "--webPort=7003", "--baseUrl=https://<secret>"]
 
   issuer-backend-slo.<domain>:
     hostname: issuer-backend-slo.<domain>
-    image: hrvoje45/issuer_backend:1.0.2
+    image: hrvoje45/issuer_backend:1.0.7
     ports:
       - 8002:8080
     depends_on:
