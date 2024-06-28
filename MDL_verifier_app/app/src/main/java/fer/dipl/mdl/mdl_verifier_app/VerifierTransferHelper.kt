@@ -29,17 +29,24 @@ import com.upokecenter.cbor.CBORObject
 import id.walt.mdoc.COSECryptoProviderKeyInfo
 import id.walt.mdoc.SimpleCOSECryptoProvider
 import id.walt.mdoc.dataelement.AnyDataElement
+import id.walt.mdoc.dataelement.BooleanElement
 import id.walt.mdoc.dataelement.EncodedCBORElement
 import id.walt.mdoc.dataelement.ListElement
+import id.walt.mdoc.dataelement.MapElement
+import id.walt.mdoc.dataelement.MapKey
+import id.walt.mdoc.dataelement.StringElement
 import id.walt.mdoc.dataelement.toDE
 import id.walt.mdoc.doc.MDoc
 import id.walt.mdoc.doc.MDocVerificationParams
 import id.walt.mdoc.doc.VerificationType
 import id.walt.mdoc.doc.and
+import id.walt.mdoc.docrequest.ItemsRequest
 import id.walt.mdoc.docrequest.MDocRequest
 import id.walt.mdoc.docrequest.MDocRequestBuilder
 import id.walt.mdoc.mdocauth.DeviceAuthentication
+import id.walt.mdoc.readerauth.ReaderAuthentication
 import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -47,6 +54,20 @@ import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.UUID
 
+@Serializable
+data class MyItemsRequest  constructor (
+    val docType: StringElement,
+    val nameSpaces: MapElement
+) {
+    /**
+     * Convert to CBOR map element
+     */
+    fun toMapElement() = buildMap {
+        put(MapKey("docType"), docType)
+        put(MapKey("nameSpaces"), nameSpaces)
+    }.toDE()
+
+}
 
 class VerifierTransferHelper private constructor(
     private var context: Context,
@@ -114,6 +135,12 @@ class VerifierTransferHelper private constructor(
 
             createMdocRequest(requested_items)
 
+            Logger.d(TAG, id.walt.mdoc.dataretrieval.DeviceRequest(
+                listOf(
+                    mdocRequest
+                )
+            ).toCBORHex())
+
             verificationHelper!!.sendRequest(
                 id.walt.mdoc.dataretrieval.DeviceRequest(
                     listOf(
@@ -131,6 +158,13 @@ class VerifierTransferHelper private constructor(
         override fun onResponseReceived(deviceResponseBytes: ByteArray) {
             Logger.d(TAG, "onResponseReceived")
             Logger.d(TAG, String(deviceResponseBytes))
+            //Logger.d(TAG, MDoc.fromCBOR(deviceResponseBytes).toCBORHex().length.toString())
+            //Logger.d(TAG, MDoc.fromCBOR(deviceResponseBytes).toCBORHex().substring(0,2000))
+            //Logger.d(TAG, MDoc.fromCBOR(deviceResponseBytes).toCBORHex().substring(2000,4000))
+            //Logger.d(TAG, MDoc.fromCBOR(deviceResponseBytes).toCBORHex().substring(4000,6000))
+            //Logger.d(TAG, MDoc.fromCBOR(deviceResponseBytes).toCBORHex().substring(6000,8000))
+            //Logger.d(TAG, MDoc.fromCBOR(deviceResponseBytes).toCBORHex().substring(8000,10000))
+            //Logger.d(TAG, MDoc.fromCBOR(deviceResponseBytes).toCBORHex().substring(10000))
             state.value = "Response Received"
 
             val mdoc_presentation = MDoc.fromCBOR(deviceResponseBytes)
@@ -139,6 +173,7 @@ class VerifierTransferHelper private constructor(
 
             val device_auth = DeviceAuthentication(sessionTranscript, "org.iso.18013.5.1.mDL", mdoc_presentation.deviceSigned!!.nameSpaces)
 
+            Logger.d("DEVICE AUTH", device_auth.toCBOR().joinToString(""){ String.format("%02X", it) })
 
             var pres_chain: List<X509Certificate> = mutableListOf()
 
@@ -185,17 +220,28 @@ class VerifierTransferHelper private constructor(
 
             ))
 
-            /*val mdocVerified = mdoc_presentation.verify(
+            val dummy_request = MDocRequestBuilder("org.iso.18013.5.1.mDL")
+                .addDataElementRequest("org.iso.18013.5.1", "portrait", false)
+                .addDataElementRequest("org.iso.18013.5.1", "age_over_18", false)
+                .build()
+
+
+            val mdocVerified = mdoc_presentation.verify(
                 MDocVerificationParams(
-                    VerificationType.DOC_TYPE and VerificationType.DEVICE_SIGNATURE and VerificationType.ISSUER_SIGNATURE and VerificationType.ITEMS_TAMPER_CHECK,
+                    VerificationType.DOC_TYPE and
+                            VerificationType.DEVICE_SIGNATURE and
+                            VerificationType.ISSUER_SIGNATURE and
+                            VerificationType.ITEMS_TAMPER_CHECK and VerificationType.VALIDITY,
                     issuerKeyID = "ISSUER_KEY_ID",
                     deviceKeyID = "DEVICE_KEY_ID",
                     deviceAuthentication = device_auth,
-                    //mDocRequest = mdocRequest
-                ), cryptoProvider_reader)*/
+                    mDocRequest = dummy_request
+                ), cryptoProvider_reader)
+
+            Logger.d("MDOC VERIFIED", mdocVerified.toString())
 
 
-            val  issuer_signature_verified = mdoc_presentation.verifySignature(cryptoProvider_reader, "ISSUER_KEY_ID")
+            val issuer_signature_verified = mdoc_presentation.verifySignature(cryptoProvider_reader, "ISSUER_KEY_ID")
             val device_signature_verified = mdoc_presentation.verifyDeviceSignature(device_auth, cryptoProvider_reader, "DEVICE_KEY_ID")
             val issuer_certificate_verified = mdoc_presentation.verifyCertificate(cryptoProvider_reader, "ISSUER_KEY_ID")
 
@@ -260,6 +306,8 @@ class VerifierTransferHelper private constructor(
 
         val sessionTranscript = EncodedCBORElement(verificationHelper!!.sessionTranscript).decode() as ListElement
 
+        Logger.d("SEESION", sessionTranscript.toCBORHex())
+
 
         val mdoc_request_builder = MDocRequestBuilder("org.iso.18013.5.1.mDL")
 
@@ -267,6 +315,20 @@ class VerifierTransferHelper private constructor(
             mdoc_request_builder.addDataElementRequest("org.iso.18013.5.1", it, false)
             Logger.d("REQUESTED ITEM: ", it)
         }
+
+        val enc =  EncodedCBORElement(
+            MyItemsRequest(
+            docType = "org.iso.18013.5.1.mDL".toDE(),
+            nameSpaces = mdoc_request_builder.nameSpaces.map { ns ->
+                Pair(MapKey(ns.key), ns.value.map { item ->
+                    Pair(MapKey(item.key), BooleanElement(item.value))
+                }.toMap().toDE())
+            }.toMap().toDE()
+        ).toMapElement())
+
+        val readerAuth = readerCryptoProvider.sign1(EncodedCBORElement(ReaderAuthentication(sessionTranscript, enc).toCBOR()).toCBOR(), READER_KEY_ID)
+
+        Logger.d("ReaderA", readerAuth.toCBORHex())
 
 
         val mdoc_request = mdoc_request_builder.sign(sessionTranscript, readerCryptoProvider, READER_KEY_ID)
