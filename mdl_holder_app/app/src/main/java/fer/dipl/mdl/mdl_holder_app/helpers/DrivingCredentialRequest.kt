@@ -24,44 +24,22 @@ import java.io.InputStreamReader
 import java.util.concurrent.TimeUnit
 
 
-/*
-* writing to file
-*
-            val dir: File = File(context.filesDir, "mdoc_dir")
-            if (!dir.exists()) {
-                dir.mkdir()
-            }
-
-            try {
-                val gpxfile = File(dir, "mdoc.txt")
-                val writer = FileWriter(gpxfile)
-                writer.append("ovo je mdoc2")
-                writer.flush()
-                writer.close()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-* */
-
 @Serializable
 data class JwtPayload(
     val aud: String,
     val iat: Long,
     val nonce: String
-    // Add other fields as needed
 )
 @Serializable
 data class JWTProofPayload(
     val proof_type: String,
     val jwt: String
-    // Add other fields as needed
 )
 @Serializable
 data class CredentialRequestPayload(
     val credentialIdentifier: String,
     val proof: JWTProofPayload,
     val format: String,
-    // Add other fields as needed
     val types: Array<String>
 )
 
@@ -70,37 +48,6 @@ class DrivingCredentialRequest(context: Context){
     lateinit var user_key: JWKKey
 
     var policy: StrictMode.ThreadPolicy = StrictMode.ThreadPolicy.Builder().permitAll().build()
-
-
-    /*init {
-        StrictMode.setThreadPolicy(policy)
-        try {
-
-            var bufferString: String = ""
-
-            try {
-                val readFile = File(context.filesDir, "mdoc_dir/mdoc.txt")
-                val fIn: FileInputStream = FileInputStream(readFile)
-                val myReader = BufferedReader(InputStreamReader(fIn))
-
-                bufferString = myReader.readText()
-
-                myReader.close()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-            Logger.d("Credential", bufferString)
-
-            if (bufferString != ""){
-                this.driving_credential = MDoc.fromCBORHex(bufferString)
-            }
-
-        }catch (e: Exception){
-            e.printStackTrace()
-            Logger.d("CREDENTIAL INIT", e.stackTrace.toString())
-        }
-    }
-*/
 
 
     fun getCredential(context: Context): MDoc?{
@@ -127,12 +74,16 @@ class DrivingCredentialRequest(context: Context){
 
     }
     fun deleteCredential(context: Context): Boolean{
-
-        var bufferString: String = ""
         try {
-            val readFile = File(context.filesDir, "mdoc_dir/mdoc.txt")
-            readFile.delete()
-            Logger.d("Credential", "DELETED")
+            val mdocFile = File(context.filesDir, "mdoc_dir/mdoc.txt")
+            //mdocFile.delete()
+            Logger.d("CREDENTIAL DELETED:", mdocFile.delete().toString())
+
+            val userKeyFile = File(context.filesDir, "mdoc_dir/user_key.txt")
+            //userKeyFile.delete()
+            Logger.d("USER KEY DELETED:", userKeyFile.delete().toString())
+
+
             return true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -163,7 +114,6 @@ class DrivingCredentialRequest(context: Context){
                     user_key,
                     context
                 )
-
 
                 Logger.d("MDOC RECEIVED", received_mdoc!!.toCBORHex())
 
@@ -223,11 +173,9 @@ class DrivingCredentialRequest(context: Context){
         }else{
             // Create end user key (wallet)
             val user_key = JWKKey.generate(KeyType.secp256r1, JWKKeyMetadata())
-            println("Wallet KEY: " + user_key.exportJWK())
 
             this.user_key = user_key
 
-            Logger.d("USER KEY", user_key.exportJWK())
 
             val mdoc_dir: File = File(context.filesDir, "mdoc_dir")
 
@@ -235,8 +183,8 @@ class DrivingCredentialRequest(context: Context){
                 mdoc_dir.mkdir()
             }
             try {
-                val gpxfile = File(mdoc_dir, "user_key.txt")
-                val writer = FileWriter(gpxfile)
+                val userKeyFile = File(mdoc_dir, "user_key.txt")
+                val writer = FileWriter(userKeyFile)
                 writer.append(user_key.exportJWK())
                 writer.flush()
                 writer.close()
@@ -244,10 +192,7 @@ class DrivingCredentialRequest(context: Context){
                 e.printStackTrace()
             }
         }
-
-
         Logger.d("USER KEY", this.user_key.exportJWK())
-
     }
 
     private suspend fun request_flow(username: String, password: String, client_id: String, client_secret: String, issuer_backend_url: String, issuer_api_url: String, idp_url: String, user_did:JWKKey, context: Context):MDoc?{
@@ -259,8 +204,6 @@ class DrivingCredentialRequest(context: Context){
 
         val registrar = DidJwkRegistrar()
         val user_didResult = registrar.registerByKey(user_key, user_options)
-        println("User DiD: " + user_didResult)
-        println("User DiD: " + user_didResult.did)
 
         val user_did = user_didResult.did
 
@@ -292,8 +235,10 @@ class DrivingCredentialRequest(context: Context){
             .addHeader("Authorization", "Bearer " + access_token.toString().replace("\"",""))
             .build()
         response = client.newCall(request).execute()
+        
+        val response_body = response.body?.string()!!
+        val credential_offer_uri = Json.parseToJsonElement(response_body).jsonObject.get("credential_offer_uri").toString().replace("\"","")
 
-        val credential_offer_uri = Json.parseToJsonElement(response.body?.string()!!).jsonObject.get("credential_offer_uri").toString().replace("\"","")
         Logger.d("OFFER URI:", credential_offer_uri)
 
         val request_offer_uri = Request.Builder()
@@ -350,9 +295,7 @@ class DrivingCredentialRequest(context: Context){
         )
 
         val credential_request_payload = CredentialRequestPayload(
-            //credentialIdentifier = "UniversityDegree",
             credentialIdentifier = "Iso18013DriversLicenseCredential",
-            //format = "jwt_vc_json",
             format = "mso_mdoc",
             proof = jwt_proof_payload,
             types = arrayOf("Iso18013DriversLicenseCredential")
@@ -360,7 +303,7 @@ class DrivingCredentialRequest(context: Context){
         val credential_json = Json.encodeToString(CredentialRequestPayload.serializer(), credential_request_payload)
         val credential_request_body = credential_json.toRequestBody()
 
-        val credential_mediaType = "application/json".toMediaType()
+        //val credential_mediaType = "application/json".toMediaType()
 
         val credential_request = Request.Builder()
             .url("${issuer_api_url}/credential")
@@ -372,10 +315,6 @@ class DrivingCredentialRequest(context: Context){
 
         val mdoc = credential_response.body?.string()?.let { Json.parseToJsonElement(it) }
         println("MDOC: " + mdoc?.jsonObject?.get("credential"))
-        Logger.d("MDOC", mdoc?.jsonObject?.get("credential").toString().length.toString())
-        Logger.d("MDOC", mdoc?.jsonObject?.get("credential").toString().substring(0,4000))
-        Logger.d("MDOC", mdoc?.jsonObject?.get("credential").toString().substring(4000,8000))
-        Logger.d("MDOC", mdoc?.jsonObject?.get("credential").toString().substring(8000))
 
         val mdoc_mdoc = MDoc.fromCBORHex(mdoc?.jsonObject?.get("credential").toString().replace("\"",""))
 
@@ -387,8 +326,8 @@ class DrivingCredentialRequest(context: Context){
             dir.mkdir()
         }
         try {
-            val gpxfile = File(dir, "mdoc.txt")
-            val writer = FileWriter(gpxfile)
+            val mdocFile = File(dir, "mdoc.txt")
+            val writer = FileWriter(mdocFile)
             writer.append(mdoc_mdoc.toCBORHex())
             writer.flush()
             writer.close()

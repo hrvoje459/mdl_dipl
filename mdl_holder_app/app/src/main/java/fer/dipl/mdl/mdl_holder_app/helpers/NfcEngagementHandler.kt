@@ -61,6 +61,8 @@ class NfcEngagementHandler : HostApduService() {
         override fun onDeviceConnected(transport: DataTransport) {
             Logger.d(TAG, "Device Connected")
 
+            Logger.d("NFC ENGAGEMENT", engagementHelper!!.deviceEngagement.joinToString(""){ String.format("%02X", it) })
+
             nfcTransferHelper.setConnected(
                 eDeviceKeyPair,
                 SecureArea.EC_CURVE_P256,

@@ -198,7 +198,7 @@ private fun RequestRadios(context: Context, mdoc_request: ByteArray, initator: S
                                 context
                             )
 
-                            biometricPromptBuilder.setTitle("HRVOJE PROMPT")
+                            biometricPromptBuilder.setTitle("Send mDL presentation")
                             biometricPromptBuilder.setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL)
 
                             var biometricPrompt = biometricPromptBuilder.build()

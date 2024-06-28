@@ -28,14 +28,14 @@
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/wallet"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/wallet"
         android:supportsRtl="true"
         android:theme="@style/Theme.MDL_holder_app"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".StartingActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.MDL_holder_app">
@@ -46,19 +46,37 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".QRPresentationActivity"
+            android:name=".activities.QRPresentationActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.MDL_holder_app">
         </activity>
         <activity
-            android:name=".NFCPresentationActivity"
+            android:name=".activities.NFCPresentationActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.MDL_holder_app">
         </activity>
         <activity
-            android:name=".RequestCredentialActivity"
+            android:name=".activities.RequestCredentialActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_holder_app">
+        </activity>
+        <activity
+            android:name=".activities.RequestApprovalActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_holder_app">
+        </activity>
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.MDL_holder_app">
+        </activity>
+        <activity
+            android:name=".ExitActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.MDL_holder_app">
@@ -66,7 +84,7 @@
 
 
         <service
-            android:name=".NfcEngagementHandler"
+            android:name=".helpers.NfcEngagementHandler"
             android:exported="true"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_NFC_SERVICE">

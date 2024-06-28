@@ -1,12 +1,16 @@
 package fer.dipl.mdl.mdl_holder_app
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -86,8 +90,48 @@ data class DataElementHrv(
 
 class MainActivity : ComponentActivity() {
 
+    private val permissionsLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            permissions.entries.forEach {
+                Logger.d("MAIN HRV", "permissionsLauncher ${it.key} = ${it.value}")
+                if (!it.value) {
+                    Toast.makeText(
+                        this,
+                        "The ${it.key} permission is required for BLE",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@registerForActivityResult
+                }
+            }
+        }
+
+    private val appPermissions: Array<String> =
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            arrayOf(
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+            )
+        } else {
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+            )
+        }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val permissionsNeeded = appPermissions.filter { permission ->
+            ContextCompat.checkSelfPermission(
+                applicationContext,
+                permission
+            ) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (permissionsNeeded.isNotEmpty()) {
+            permissionsLauncher.launch(
+                permissionsNeeded.toTypedArray()
+            )
+        }
 
         QRTransferHelper.kill()
 
