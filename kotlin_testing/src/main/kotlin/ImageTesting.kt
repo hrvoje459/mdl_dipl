@@ -13,11 +13,11 @@ suspend fun main(){
     println("Image Testing")
 
 
-    val imageFile = File("/Users/hrvojerom/faks/diplomski_rad/mdl_dipl/kotlin_testing/src/main/resources/miro_this_person_does_not_exist.jpeg")
+    val imageFile = File("/Users/hrvojerom/faks/diplomski_rad/mdl_dipl/kotlin_testing/src/main/resources/lucija_juric.jpeg")
     val imageByteArray = imageToByteArray(imageFile)
     println("Image decoded into byte array with size: ${imageByteArray.size}")
 
-    val newImage = File("/Users/hrvojerom/faks/diplomski_rad/mdl_dipl/kotlin_testing/src/main/resources/miro_this_person_does_not_exist.jpeg")
+    val newImage = File("/Users/hrvojerom/faks/diplomski_rad/mdl_dipl/kotlin_testing/src/main/resources/lucija_juric.jpeg")
     byteArrayToImage(imageByteArray, newImage)
 
     println(Base64.getEncoder().encodeToString(imageByteArray))

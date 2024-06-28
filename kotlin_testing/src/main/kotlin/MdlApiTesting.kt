@@ -84,8 +84,8 @@ suspend fun main (){
             "      \"given_name\": \"SUSAN\",\n" +
             "      \"portrait\": \"data:image/jpeg;base64,/9j/4AAQSkZJR...RSClooooP/2Q==\",\n" +
             "      \"birth_date\": \"1998-08-28\",\n" +
-            "      \"issue_date\": \"2023-01-15T10:00:00-07:00\",\n" +
-            "      \"expiry_date\": \"2028-08-27T12:00:00-06:00\",\n" +
+            "      \"issue_date\": \"2023-01-15\",\n" +
+            "      \"expiry_date\": \"2028-08-27\",\n" +
             "      \"issuing_country\": \"UA\",\n" +
             "      \"issuing_authority\": \"UADMV\",\n" +
             "      \"driving_privileges\": [{\n" +
@@ -216,9 +216,18 @@ suspend fun main (){
         .addHeader("accept", "text/plain")
         .addHeader("Content-Type", "application/json")
         .build()
+
+
+    println("REQUEST URL: " +  request.url)
+    println("REQUEST BODY: " +  drivingLicenseCredentailRequest)
+    println("REQUEST METHOD: " +  request.method)
+    println("REQUEST HEADERS: " +  request.headers)
+
     var response = client.newCall(request).execute()
 
     println("RESPONSE: " + response)
+    println("RESPONSE: " + response.headers)
+    //println("RESPONSE: " + response.body?.string())
 
     val response_body = response.body?.string()
     println(response_body)
@@ -227,8 +236,8 @@ suspend fun main (){
 
     println(URLDecoder.decode(response_body?.split("?")?.get(1)?.split("=")?.get(1),"UTF-8"))
 
-    //val credential_offer_uri = URLDecoder.decode(response_body?.split("?")?.get(1)?.split("=")?.get(1),"UTF-8")
-    val credential_offer_uri = "http://localhost:7002/openid4vc/credentialOffer?id=f7e6fe37-694e-45b6-84dc-5b19d35f9ec9"
+    val credential_offer_uri = URLDecoder.decode(response_body?.split("?")?.get(1)?.split("=")?.get(1),"UTF-8")
+    //val credential_offer_uri = "http://localhost:7002/openid4vc/credentialOffer?id=f7e6fe37-694e-45b6-84dc-5b19d35f9ec9"
 
     println("OFFER URI: " + credential_offer_uri)
 
@@ -335,7 +344,8 @@ suspend fun main (){
 
     val credential_request_payload = CredentialRequestPayload(
         credentialIdentifier = "UniversityDegree",
-        format = "jwt_vc_json",
+        //format = "jwt_vc_json",
+        format = "mso_mdoc",
         proof = jwt_proof_payload,
         types = arrayOf("testhrv")
     )
